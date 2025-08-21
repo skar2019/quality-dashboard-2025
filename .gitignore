@@ -1,0 +1,64 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+**/node_modules
+**/pnp
+**/pnp.js
+
+# testing
+**/coverage
+
+# production
+**/build
+
+# environment variables
+**/.env
+
+# ML Models specific
+ml_models/app.log
+ml_models/data/
+ml_models/venv/
+ml_models/chroma_db/
+ml_models/__pycache__/
+ml_models/*.pyc
+ml_models/*.pyo
+ml_models/*.pyd
+ml_models/.Python
+ml_models/env/
+ml_models/pip-log.txt
+ml_models/pip-delete-this-directory.txt
+ml_models/.tox/
+ml_models/.coverage
+ml_models/.pytest_cache/
+ml_models/.mypy_cache/
+ml_models/.dmypy.json
+ml_models/dmypy.json
+
+# POC ChromaDB
+poc/chroma_db/
+
+# JIRA Tasks ChromaDB
+ml_models/jira_tasks_chroma_db/
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+ml_models/chroma_db/

@@ -1,0 +1,26 @@
+{
+	"include": ["src/**/*"],
+	"exclude": ["node_modules"],
+	"rootDirs": ["./", "src"],
+	"display": "Node 18",
+	"compilerOptions": {
+		"outDir": "dist",
+		"resolveJsonModule": true,
+		"lib": ["ES2022"],
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"target": "ES2022",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"rootDir": "src",
+		"allowJs": true
+	},
+	"ts-node": {
+		"files": true,
+		"esm": true
+	}
+}

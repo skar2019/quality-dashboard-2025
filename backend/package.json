@@ -1,0 +1,48 @@
+{
+  "name": "quality-dashboard-backend",
+  "version": "1.0.0",
+  "main": "app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx src/app.ts",
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "test:crud": "tsx src/test/projectCRUD.ts"
+  },
+  "author": "Deepak Tiwari",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/csv-parse": "^1.1.12",
+    "@types/express": "^5.0.2",
+    "@types/express-session": "^1.18.2",
+    "@types/multer": "^1.4.13",
+    "@types/node": "^22.15.34",
+    "@types/uuid": "^10.0.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@types/cors": "^2.8.18",
+    "@types/joi": "^17.2.3",
+    "@types/morgan": "^1.9.10",
+    "axios": "^1.9.0",
+    "connect-mongo": "^5.1.0",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "joi": "^17.13.3",
+    "mongodb": "^6.16.0",
+    "mongoose": "^8.15.1",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "node-fetch": "^3.3.2",
+    "uuid": "^11.1.0"
+  }
+}
