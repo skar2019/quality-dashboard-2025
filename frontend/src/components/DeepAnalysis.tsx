@@ -256,14 +256,14 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <AnalyticsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <AnalyticsIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Analysis Metrics
         </Typography>
         
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="primary">
+              <Typography variant="h4" sx={{ color: '#9C27B0' }}>
                 {metrics.overallHealth}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -272,15 +272,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.overallHealth} 
-                sx={{ mt: 1 }}
-                color={metrics.overallHealth >= 80 ? 'success' : metrics.overallHealth >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1, 
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.overallHealth >= 80 ? '#9C27B0' : metrics.overallHealth >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="error">
+              <Typography variant="h4" sx={{ color: '#F44336' }}>
                 {metrics.riskScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -289,15 +292,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={100 - metrics.riskScore} 
-                sx={{ mt: 1 }}
-                color={metrics.riskScore <= 30 ? 'success' : metrics.riskScore <= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.riskScore <= 30 ? '#9C27B0' : metrics.riskScore <= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="info">
+              <Typography variant="h4" sx={{ color: '#FF9800' }}>
                 {metrics.performanceScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -306,15 +312,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.performanceScore} 
-                sx={{ mt: 1 }}
-                color={metrics.performanceScore >= 80 ? 'success' : metrics.performanceScore >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.performanceScore >= 80 ? '#9C27B0' : metrics.performanceScore >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="success">
+              <Typography variant="h4" sx={{ color: '#2196F3' }}>
                 {metrics.qualityScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -323,8 +332,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.qualityScore} 
-                sx={{ mt: 1 }}
-                color={metrics.qualityScore >= 80 ? 'success' : metrics.qualityScore >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.qualityScore >= 80 ? '#9C27B0' : metrics.qualityScore >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
@@ -362,7 +374,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <PsychologyIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <PsychologyIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Key Insights ({insights.length})
         </Typography>
         
@@ -447,7 +459,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Strategic Recommendations ({recommendations.length})
         </Typography>
         
@@ -455,7 +467,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           {recommendations.map((rec, index) => (
             <Paper key={index} variant="outlined" sx={{ p: 2 }}>
               <Box display="flex" alignItems="flex-start" gap={1}>
-                <CheckCircleIcon color="primary" sx={{ mt: 0.5, flexShrink: 0 }} />
+                <CheckCircleIcon sx={{ mt: 0.5, flexShrink: 0, color: '#9C27B0' }} />
                 <Typography variant="body1">
                   {rec}
                 </Typography>
@@ -471,7 +483,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <TimelineIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <TimelineIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#FF9800' }} />
           Predictive Insights ({predictions.length})
         </Typography>
         
@@ -479,7 +491,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           {predictions.map((prediction, index) => (
             <Paper key={index} variant="outlined" sx={{ p: 2 }}>
               <Box display="flex" alignItems="flex-start" gap={1}>
-                <TrendingUpIcon color="info" sx={{ mt: 0.5, flexShrink: 0 }} />
+                <TrendingUpIcon sx={{ mt: 0.5, flexShrink: 0, color: '#FF9800' }} />
                 <Typography variant="body1">
                   {prediction}
                 </Typography>
@@ -495,7 +507,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <SpeedIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <SpeedIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Immediate Action Items ({actionItems.length})
         </Typography>
         
@@ -529,8 +541,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <Box mt={2} display="flex" gap={2} alignItems="center">
             <Chip 
               label={`Analysis Type: ${analysisData.analysisType}`} 
-              color="primary" 
-              variant="outlined"
+              sx={{ 
+                backgroundColor: '#E1BEE7', 
+                color: '#4A148C',
+                border: '1px solid #9C27B0'
+              }}
             />
             <Chip 
               label={`Generated: ${new Date(analysisData.generatedAt).toLocaleString()}`} 
@@ -538,7 +553,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             />
             <Chip 
               label={`Analysis Time: ${analysisData.analysisTime.toFixed(1)}s`} 
-              color="success"
+              sx={{ 
+                backgroundColor: '#FFE0B2', 
+                color: '#E65100',
+                border: '1px solid #FF9800'
+              }}
             />
           </Box>
         </CardContent>
@@ -576,12 +595,12 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
         minHeight: '60px',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'success.main', width: 36, height: 36 }}>
+          <Avatar sx={{ bgcolor: '#9C27B0', width: 36, height: 36 }}>
             <AssessmentIcon fontSize="small" />
           </Avatar>
           <Box>
-            <Typography variant="h6" fontWeight="bold" color="success.main">
-              Summary Reports
+            <Typography variant="h6" fontWeight="bold" sx={{ color: '#9C27B0' }}>
+              Deep Analysis
             </Typography>
             <Typography variant="caption" color="text.secondary">
               AI-Powered Project Analytics
@@ -590,9 +609,12 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <Chip 
             label="Connected"
             size="small" 
-            color="success"
-            variant="outlined"
-            sx={{ ml: 1 }}
+            sx={{ 
+              ml: 1, 
+              backgroundColor: '#E1BEE7', 
+              color: '#4A148C',
+              border: '1px solid #9C27B0'
+            }}
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -600,11 +622,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             <IconButton 
               onClick={() => window.location.reload()} 
               size="small" 
-              color="success"
               sx={{ 
+                color: '#9C27B0',
                 '&:hover': { 
-                  backgroundColor: 'success.light',
-                  color: 'white'
+                  backgroundColor: '#E1BEE7',
+                  color: '#4A148C'
                 }
               }}
             >
@@ -642,7 +664,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               }}
             >
               {message.type === 'bot' && (
-                <Avatar sx={{ bgcolor: 'success.main', width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: '#9C27B0', width: 32, height: 32 }}>
                   <AssessmentIcon fontSize="small" />
                 </Avatar>
               )}
@@ -656,7 +678,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
                   elevation={1}
                   sx={{
                     p: 2,
-                    backgroundColor: message.type === 'user' ? 'success.main' : 'grey.50',
+                    backgroundColor: message.type === 'user' ? '#9C27B0' : 'grey.50',
                     color: message.type === 'user' ? 'white' : 'text.primary',
                     borderRadius: 2,
                     minWidth: 200,
@@ -678,8 +700,8 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               )}
               
               {message.type === 'user' && (
-                <Avatar sx={{ bgcolor: 'secondary.light', width: 32, height: 32 }}>
-                  <TrendingUpIcon sx={{ color: 'black' }} />
+                <Avatar sx={{ bgcolor: '#FF9800', width: 32, height: 32 }}>
+                  <TrendingUpIcon sx={{ color: 'white' }} />
                 </Avatar>
               )}
             </Box>
@@ -753,8 +775,13 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <IconButton
             onClick={handleSendMessage}
             disabled={!inputText.trim() || isLoading}
-            color="success"
-            sx={{ alignSelf: 'flex-end' }}
+            sx={{ 
+              alignSelf: 'flex-end',
+              color: '#9C27B0',
+              '&:hover': {
+                backgroundColor: '#E1BEE7'
+              }
+            }}
           >
             <SendIcon />
           </IconButton>
