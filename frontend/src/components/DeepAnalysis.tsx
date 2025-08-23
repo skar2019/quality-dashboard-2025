@@ -74,8 +74,71 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
   const [error, setError] = useState<string | null>(null);
   const [selectedSprint, setSelectedSprint] = useState<string>(sprintFilter || '');
   const [selectedProject, setSelectedProject] = useState<string>(projectFilter || '');
+  const [availableProjects, setAvailableProjects] = useState<Array<{id: string, name: string}>>([]);
+  const [projectsLoading, setProjectsLoading] = useState<boolean>(true);
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Handle project selection change
+  const handleProjectChange = (e: SelectChangeEvent) => {
+    const newProject = e.target.value;
+    setSelectedProject(newProject);
+    
+    // If "All Projects" is selected, clear sprint selection
+    if (newProject === "") {
+      setSelectedSprint("");
+    }
+  };
+
+  // Fetch available projects on component mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setProjectsLoading(true);
+        const response = await fetch('/api/projects', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Projects API response:', data);
+          
+          // Handle different possible API response structures
+          let projectsArray = [];
+          if (Array.isArray(data)) {
+            projectsArray = data;
+          } else if (data && Array.isArray(data.data)) {
+            projectsArray = data.data;
+          } else if (data && Array.isArray(data.projects)) {
+            projectsArray = data.projects;
+          } else {
+            console.warn('API response does not contain a valid projects array:', data);
+            projectsArray = [];
+          }
+          
+          // Format projects for dropdown
+          const formattedProjects = projectsArray.map((project: any) => ({
+            id: project.id || project._id || project.projectId,
+            name: project.name || project.title || project.projectName || `Project ${project.id || project._id}`
+          }));
+          
+          console.log('Formatted projects for dropdown:', formattedProjects);
+          setAvailableProjects(formattedProjects);
+        } else {
+          console.error('Failed to fetch projects from API');
+          // Fallback to empty array if API fails
+          setAvailableProjects([]);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        setAvailableProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+    
+    fetchProjects();
+  }, []);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -256,14 +319,14 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <AnalyticsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <AnalyticsIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Analysis Metrics
         </Typography>
         
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="primary">
+              <Typography variant="h4" sx={{ color: '#9C27B0' }}>
                 {metrics.overallHealth}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -272,15 +335,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.overallHealth} 
-                sx={{ mt: 1 }}
-                color={metrics.overallHealth >= 80 ? 'success' : metrics.overallHealth >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1, 
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.overallHealth >= 80 ? '#9C27B0' : metrics.overallHealth >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="error">
+              <Typography variant="h4" sx={{ color: '#F44336' }}>
                 {metrics.riskScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -289,15 +355,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={100 - metrics.riskScore} 
-                sx={{ mt: 1 }}
-                color={metrics.riskScore <= 30 ? 'success' : metrics.riskScore <= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.riskScore <= 30 ? '#9C27B0' : metrics.riskScore <= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="info">
+              <Typography variant="h4" sx={{ color: '#FF9800' }}>
                 {metrics.performanceScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -306,15 +375,18 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.performanceScore} 
-                sx={{ mt: 1 }}
-                color={metrics.performanceScore >= 80 ? 'success' : metrics.performanceScore >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.performanceScore >= 80 ? '#9C27B0' : metrics.performanceScore >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <Box textAlign="center">
-              <Typography variant="h4" color="success">
+              <Typography variant="h4" sx={{ color: '#2196F3' }}>
                 {metrics.qualityScore}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -323,8 +395,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <LinearProgress 
                 variant="determinate" 
                 value={metrics.qualityScore} 
-                sx={{ mt: 1 }}
-                color={metrics.qualityScore >= 80 ? 'success' : metrics.qualityScore >= 60 ? 'warning' : 'error'}
+                sx={{ mt: 1,
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: metrics.qualityScore >= 80 ? '#9C27B0' : metrics.qualityScore >= 60 ? '#FF9800' : '#F44336'
+                  }
+                }}
               />
             </Box>
           </Grid>
@@ -362,7 +437,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <PsychologyIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <PsychologyIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Key Insights ({insights.length})
         </Typography>
         
@@ -447,7 +522,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Strategic Recommendations ({recommendations.length})
         </Typography>
         
@@ -455,7 +530,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           {recommendations.map((rec, index) => (
             <Paper key={index} variant="outlined" sx={{ p: 2 }}>
               <Box display="flex" alignItems="flex-start" gap={1}>
-                <CheckCircleIcon color="primary" sx={{ mt: 0.5, flexShrink: 0 }} />
+                <CheckCircleIcon sx={{ mt: 0.5, flexShrink: 0, color: '#9C27B0' }} />
                 <Typography variant="body1">
                   {rec}
                 </Typography>
@@ -471,7 +546,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <TimelineIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <TimelineIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#FF9800' }} />
           Predictive Insights ({predictions.length})
         </Typography>
         
@@ -479,7 +554,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           {predictions.map((prediction, index) => (
             <Paper key={index} variant="outlined" sx={{ p: 2 }}>
               <Box display="flex" alignItems="flex-start" gap={1}>
-                <TrendingUpIcon color="info" sx={{ mt: 0.5, flexShrink: 0 }} />
+                <TrendingUpIcon sx={{ mt: 0.5, flexShrink: 0, color: '#FF9800' }} />
                 <Typography variant="body1">
                   {prediction}
                 </Typography>
@@ -495,7 +570,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     <Card sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          <SpeedIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <SpeedIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#9C27B0' }} />
           Immediate Action Items ({actionItems.length})
         </Typography>
         
@@ -529,8 +604,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <Box mt={2} display="flex" gap={2} alignItems="center">
             <Chip 
               label={`Analysis Type: ${analysisData.analysisType}`} 
-              color="primary" 
-              variant="outlined"
+              sx={{ 
+                backgroundColor: '#E1BEE7', 
+                color: '#4A148C',
+                border: '1px solid #9C27B0'
+              }}
             />
             <Chip 
               label={`Generated: ${new Date(analysisData.generatedAt).toLocaleString()}`} 
@@ -538,7 +616,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             />
             <Chip 
               label={`Analysis Time: ${analysisData.analysisTime.toFixed(1)}s`} 
-              color="success"
+              sx={{ 
+                backgroundColor: '#FFE0B2', 
+                color: '#E65100',
+                border: '1px solid #FF9800'
+              }}
             />
           </Box>
         </CardContent>
@@ -576,12 +658,12 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
         minHeight: '60px',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'success.main', width: 36, height: 36 }}>
+          <Avatar sx={{ bgcolor: '#9C27B0', width: 36, height: 36 }}>
             <AssessmentIcon fontSize="small" />
           </Avatar>
           <Box>
-            <Typography variant="h6" fontWeight="bold" color="success.main">
-              Summary Reports
+            <Typography variant="h6" fontWeight="bold" sx={{ color: '#9C27B0' }}>
+              Deep Analysis
             </Typography>
             <Typography variant="caption" color="text.secondary">
               AI-Powered Project Analytics
@@ -590,9 +672,12 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <Chip 
             label="Connected"
             size="small" 
-            color="success"
-            variant="outlined"
-            sx={{ ml: 1 }}
+            sx={{ 
+              ml: 1, 
+              backgroundColor: '#E1BEE7', 
+              color: '#4A148C',
+              border: '1px solid #9C27B0'
+            }}
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -600,11 +685,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             <IconButton 
               onClick={() => window.location.reload()} 
               size="small" 
-              color="success"
               sx={{ 
+                color: '#9C27B0',
                 '&:hover': { 
-                  backgroundColor: 'success.light',
-                  color: 'white'
+                  backgroundColor: '#E1BEE7',
+                  color: '#4A148C'
                 }
               }}
             >
@@ -642,7 +727,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               }}
             >
               {message.type === 'bot' && (
-                <Avatar sx={{ bgcolor: 'success.main', width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: '#9C27B0', width: 32, height: 32 }}>
                   <AssessmentIcon fontSize="small" />
                 </Avatar>
               )}
@@ -656,7 +741,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
                   elevation={1}
                   sx={{
                     p: 2,
-                    backgroundColor: message.type === 'user' ? 'success.main' : 'grey.50',
+                    backgroundColor: message.type === 'user' ? '#9C27B0' : 'grey.50',
                     color: message.type === 'user' ? 'white' : 'text.primary',
                     borderRadius: 2,
                     minWidth: 200,
@@ -678,8 +763,8 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               )}
               
               {message.type === 'user' && (
-                <Avatar sx={{ bgcolor: 'secondary.light', width: 32, height: 32 }}>
-                  <TrendingUpIcon sx={{ color: 'black' }} />
+                <Avatar sx={{ bgcolor: '#FF9800', width: 32, height: 32 }}>
+                  <TrendingUpIcon sx={{ color: 'white' }} />
                 </Avatar>
               )}
             </Box>
@@ -704,13 +789,15 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <Select
                 value={selectedProject}
                 label="Project"
-                onChange={(e: SelectChangeEvent) => setSelectedProject(e.target.value)}
-                disabled={isLoading}
+                onChange={handleProjectChange}
+                disabled={isLoading || projectsLoading}
               >
                 <MenuItem value="">All Projects</MenuItem>
-                <MenuItem value="Adani">Adani</MenuItem>
-                <MenuItem value="Mobile App">Mobile App</MenuItem>
-                <MenuItem value="Web Platform">Web Platform</MenuItem>
+                {availableProjects.map((project) => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -753,8 +840,13 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           <IconButton
             onClick={handleSendMessage}
             disabled={!inputText.trim() || isLoading}
-            color="success"
-            sx={{ alignSelf: 'flex-end' }}
+            sx={{ 
+              alignSelf: 'flex-end',
+              color: '#9C27B0',
+              '&:hover': {
+                backgroundColor: '#E1BEE7'
+              }
+            }}
           >
             <SendIcon />
           </IconButton>

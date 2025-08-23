@@ -398,21 +398,21 @@ const ProjectInsiderAnalysis: React.FC = () => {
               >
                 <Tab 
                   icon={<ChatIcon />} 
-                  label="Project Analysis" 
+                  label="Task Analysis" 
                   iconPosition="start"
-                  sx={{ flexDirection: 'row', gap: 1 }}
+                  sx={{ flexDirection: 'row', gap: 1, fontSize: '15px' }}
                 />
                 <Tab 
                   icon={<AssessmentIcon />} 
                   label="Summary Report" 
                   iconPosition="start"
-                  sx={{ flexDirection: 'row', gap: 1 }}
+                  sx={{ flexDirection: 'row', gap: 1, fontSize: '15px' }}
                 />
                 <Tab 
                   icon={<PsychologyIcon />} 
                   label="Deep Analysis" 
                   iconPosition="start"
-                  sx={{ flexDirection: 'row', gap: 1 }}
+                  sx={{ flexDirection: 'row', gap: 1, fontSize: '15px' }}
                 />
               </Tabs>
             </Box>
@@ -437,7 +437,7 @@ const ProjectInsiderAnalysis: React.FC = () => {
                     </Avatar>
                     <Box>
                       <Typography variant="h6" fontWeight="bold" color="primary">
-                        Insider
+                        Task Analysis
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         AI Assistant
@@ -708,8 +708,10 @@ const ProjectInsiderAnalysis: React.FC = () => {
           {/* Quick Actions */}
           <Card elevation={2} sx={{ borderRadius: 2, flex: 1 }}>
             <CardContent sx={{ p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
-                  {activeTab === 0 ? 'Quick Questions' : 'Quick Actions'}
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ 
+                  color: activeTab === 0 ? 'primary.main' : activeTab === 1 ? 'success.main' : '#9C27B0' 
+                }}>
+                  {activeTab === 0 ? 'Capabilities' : 'Report Types'}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1, overflow: 'auto' }}>
                   {getCurrentQuestions().slice(0, 12).map((question, index) => (
@@ -726,19 +728,19 @@ const ProjectInsiderAnalysis: React.FC = () => {
                         transition: 'all 0.15s ease-out',
                         willChange: 'transform, background-color, color',
                         '&:hover': {
-                          backgroundColor: activeTab === 0 ? 'primary.50' : 'success.50',
-                          borderColor: activeTab === 0 ? 'primary.main' : 'success.main',
+                          backgroundColor: activeTab === 0 ? 'primary.50' : activeTab === 1 ? 'success.50' : '#E1BEE7',
+                          borderColor: activeTab === 0 ? 'primary.main' : activeTab === 1 ? 'success.main' : '#9C27B0',
                           transform: 'translateY(-1px)',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                           '& .MuiChip-label': {
                             fontWeight: 600,
-                            color: activeTab === 0 ? 'primary.main' : 'success.main',
+                            color: activeTab === 0 ? 'primary.main' : activeTab === 1 ? 'success.main' : '#4A148C',
                           },
                         },
                         '& .MuiChip-label': {
                           whiteSpace: 'normal',
                           lineHeight: 1.2,
-                          fontSize: '0.8rem',
+                          fontSize: '15px',
                           padding: '4px 8px',
                           fontWeight: 500,
                           textRendering: 'optimizeLegibility',
@@ -755,41 +757,96 @@ const ProjectInsiderAnalysis: React.FC = () => {
             {/* Capabilities */}
             <Card elevation={2} sx={{ borderRadius: 2, flex: 0.5 }}>
               <CardContent sx={{ p: 1.5 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: activeTab === 0 ? 'primary.main' : '#9C27B0' }}>
                   {activeTab === 0 ? 'Capabilities' : 'Report Types'}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {activeTab === 0 ? (
                     <>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'primary.main' }} />
                         Analyze project data
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'primary.main' }} />
                         Sprint insights
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'primary.main' }} />
                         Quality analysis
                       </Typography>
                     </>
                   ) : (
                     <>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main' }} />
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
+                        <Box sx={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          backgroundColor: activeTab === 1 ? 'success.main' : '#9C27B0' 
+                        }} />
                         Status Summary Reports
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main' }} />
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
+                        <Box sx={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          backgroundColor: activeTab === 1 ? 'success.main' : '#9C27B0' 
+                        }} />
                         Bottleneck Analysis
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main' }} />
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
+                        <Box sx={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          backgroundColor: activeTab === 1 ? 'success.main' : '#9C27B0' 
+                        }} />
                         Executive Summaries
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main' }} />
+                      <Typography variant="body2" color="text.secondary" sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        fontSize: '15px'
+                      }}>
+                        <Box sx={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          backgroundColor: activeTab === 1 ? 'success.main' : '#9C27B0' 
+                        }} />
                         Predictive Analytics
                       </Typography>
                     </>
@@ -801,7 +858,9 @@ const ProjectInsiderAnalysis: React.FC = () => {
             {/* Data Sources */}
             <Card elevation={2} sx={{ borderRadius: 2, flex: 0.5 }}>
               <CardContent sx={{ p: 1.5 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ 
+                  color: activeTab === 0 ? 'primary.main' : activeTab === 1 ? 'success.main' : '#9C27B0' 
+                }}>
                   {activeTab === 0 ? 'Data Sources' : 'Analytics Features'}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -830,21 +889,30 @@ const ProjectInsiderAnalysis: React.FC = () => {
                     <>
                       <Chip 
                         label="RAG-Powered Analysis" 
-                        color="success" 
+                        sx={{ 
+                          alignSelf: 'flex-start',
+                          backgroundColor: activeTab === 1 ? 'success.main' : '#9C27B0',
+                          color: 'white'
+                        }}
                         size="small" 
-                        sx={{ alignSelf: 'flex-start' }}
                       />
                       <Chip 
                         label="Color-Coded Status" 
-                        color="warning" 
+                        sx={{ 
+                          alignSelf: 'flex-start',
+                          backgroundColor: activeTab === 1 ? 'warning.main' : '#FF9800',
+                          color: 'white'
+                        }}
                         size="small" 
-                        sx={{ alignSelf: 'flex-start' }}
                       />
                       <Chip 
                         label="Predictive Insights" 
-                        color="info" 
+                        sx={{ 
+                          alignSelf: 'flex-start',
+                          backgroundColor: activeTab === 1 ? 'info.main' : '#2196F3',
+                          color: 'white'
+                        }}
                         size="small" 
-                        sx={{ alignSelf: 'flex-start' }}
                       />
                     </>
                   )}
