@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from app.config.settings import settings
 from app.middleware.cors import setup_cors
-from app.routes import summarization, health, chatbot, summary_report
+from app.routes import summarization, health, chatbot, summary_report, deep_summary_report
 from app.utils.logger import setup_logging
 import logging
 
@@ -27,6 +27,7 @@ app.include_router(health.router)
 app.include_router(summarization.router)
 app.include_router(chatbot.router)
 app.include_router(summary_report.router)
+app.include_router(deep_summary_report.router)
 
 # Global exception handler
 @app.exception_handler(Exception)

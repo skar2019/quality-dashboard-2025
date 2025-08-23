@@ -34,6 +34,13 @@ ml_models/.mypy_cache/
 ml_models/.dmypy.json
 ml_models/dmypy.json
 
+# Log files
+**/logs/
+*.log
+ml_models/logs/
+backend/logs/
+frontend/logs/
+
 # POC ChromaDB
 poc/chroma_db/
 

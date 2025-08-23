@@ -1,0 +1,478 @@
+# PM2 Guide for ACSQD Project
+
+This guide explains how to use PM2 (Process Manager 2) to manage the backend and frontend services for the ACSQD (Advanced Code Quality and Software Development) project.
+
+## 📋 Prerequisites
+
+1. **Node.js and npm** installed
+2. **PM2** installed globally
+3. **Python 3.x** (for ML models)
+4. **MongoDB** running
+5. **Ollama** installed and running
+
+## 🚀 Installation
+
+### 1. Install PM2 Globally
+
+```bash
+npm install -g pm2
+```
+
+### 2. Install Project Dependencies
+
+```bash
+# Backend dependencies
+cd backend
+npm install
+
+# Frontend dependencies
+cd ../frontend
+npm install
+
+# ML Models dependencies
+cd ../ml_models
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## ⚙️ PM2 Configuration
+
+### Create Ecosystem Configuration
+
+Create `ecosystem.config.js` in the root directory:
+
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: 'acsqd-backend',
+      cwd: './backend',
+      script: 'npm',
+      args: 'run dev',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3008,
+        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
+        JWT_SECRET: 'your_jwt_secret_here',
+        ML_API_URL: 'http://localhost:8000'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3008,
+        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
+        JWT_SECRET: 'your_jwt_secret_here',
+        ML_API_URL: 'http://localhost:8000'
+      },
+      watch: ['src'],
+      ignore_watch: ['node_modules', 'logs'],
+      log_file: './logs/combined.log',
+      out_file: './logs/out.log',
+      error_file: './logs/error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'acsqd-frontend',
+      cwd: './frontend',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        REACT_APP_API_URL: 'http://localhost:3008'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        REACT_APP_API_URL: 'http://localhost:3008'
+      },
+      watch: ['src'],
+      ignore_watch: ['node_modules', 'build'],
+      log_file: './logs/combined.log',
+      out_file: './logs/out.log',
+      error_file: './logs/error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'acsqd-ml-models',
+      cwd: './ml_models',
+      script: 'main.py',
+      interpreter: './venv/bin/python',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        PYTHONPATH: './ml_models',
+        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
+        OLLAMA_HOST: 'http://localhost:11434'
+      },
+      env_production: {
+        PYTHONPATH: './ml_models',
+        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
+        OLLAMA_HOST: 'http://localhost:11434'
+      },
+      watch: ['*.py'],
+      ignore_watch: ['venv', '__pycache__'],
+      log_file: './logs/combined.log',
+      out_file: './logs/out.log',
+      error_file: './logs/error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    }
+  ]
+};
+```
+
+## 🎯 Basic PM2 Commands
+
+### Start Services
+
+```bash
+# Start all services in development mode (default)
+pm2 start ecosystem.config.js
+
+# Start all services in development mode (explicit)
+pm2 start ecosystem.config.js --env development
+
+# Start all services in production mode
+pm2 start ecosystem.config.js --env production
+
+# Start specific service in development mode
+pm2 start ecosystem.config.js --only acsqd-backend --env development
+pm2 start ecosystem.config.js --only acsqd-frontend --env development
+pm2 start ecosystem.config.js --only acsqd-ollama --env development
+pm2 start ecosystem.config.js --only acsqd-ml-models --env development
+
+# Start specific service in production mode
+pm2 start ecosystem.config.js --only acsqd-backend --env production
+pm2 start ecosystem.config.js --only acsqd-frontend --env production
+pm2 start ecosystem.config.js --only acsqd-ollama --env production
+pm2 start ecosystem.config.js --only acsqd-ml-models --env production
+
+# Start Ollama service (required for ML models)
+pm2 start ecosystem.config.js --only acsqd-ollama
+
+# Start Ollama in production mode
+pm2 start ecosystem.config.js --only acsqd-ollama --env production
+```
+
+### Monitor Services
+
+```bash
+# View all processes
+pm2 list
+
+# Monitor processes in real-time
+pm2 monit
+
+# View logs
+pm2 logs
+
+# View logs for specific service
+pm2 logs acsqd-backend
+pm2 logs acsqd-frontend
+pm2 logs acsqd-ml-models
+pm2 logs acsqd-ollama
+
+# View logs with timestamps
+pm2 logs --timestamp
+```
+
+### Manage Services
+
+```bash
+# Stop all services
+pm2 stop all
+
+# Stop specific service
+pm2 stop acsqd-backend
+pm2 stop acsqd-frontend
+pm2 stop acsqd-ml-models
+pm2 stop acsqd-ollama
+
+# Restart all services
+pm2 restart all
+
+# Restart specific service
+pm2 restart acsqd-backend
+pm2 restart acsqd-frontend
+pm2 restart acsqd-ml-models
+pm2 restart acsqd-ollama
+
+# Delete all services
+pm2 delete all
+
+# Delete specific service
+pm2 delete acsqd-backend
+pm2 delete acsqd-frontend
+pm2 delete acsqd-ollama
+pm2 delete acsqd-ml-models
+```
+
+### Reload and Scale
+
+```bash
+# Reload all services (zero-downtime restart)
+pm2 reload all
+
+# Reload specific service
+pm2 reload acsqd-backend
+
+# Scale backend to multiple instances
+pm2 scale acsqd-backend 3
+```
+
+## 🔧 Advanced Configuration
+
+### Environment Variables
+
+Create `.env` files in each service directory:
+
+**Backend (.env)**
+```env
+NODE_ENV=development
+PORT=3008
+MONGO_URL=mongodb://localhost:27017/quality_dashboard
+JWT_SECRET=your_jwt_secret_here
+ML_API_URL=http://localhost:8000
+```
+
+**Frontend (.env)**
+```env
+REACT_APP_API_URL=http://localhost:3008
+```
+
+**ML Models (.env)**
+```env
+MONGO_URL=mongodb://localhost:27017/quality_dashboard
+OLLAMA_HOST=http://localhost:11434
+```
+
+### Production Setup
+
+```bash
+# Build frontend for production
+cd frontend
+npm run build
+
+# Update ecosystem config for production
+# Change script from 'npm run dev' to 'npm start' for backend
+# Change script from 'npm start' to 'serve -s build -l 3000' for frontend
+
+# Start in production mode
+pm2 start ecosystem.config.js --env production
+```
+
+## 📊 Monitoring and Logging
+
+### PM2 Dashboard
+
+```bash
+# Install PM2 Plus for advanced monitoring
+pm2 install pm2-server-monit
+
+# View detailed metrics
+pm2 show acsqd-backend
+```
+
+### Log Management
+
+```bash
+# Clear all logs
+pm2 flush
+
+# Clear specific service logs
+pm2 flush acsqd-backend
+
+# Rotate logs
+pm2 install pm2-logrotate
+```
+
+## 🔄 Startup Scripts
+
+### Save PM2 Configuration
+
+```bash
+# Save current PM2 configuration
+pm2 save
+
+# Setup PM2 to start on system boot
+pm2 startup
+
+# Follow the instructions provided by pm2 startup
+# Then save the configuration again
+pm2 save
+```
+
+### Custom Startup Script
+
+Create `pm2-start.sh`:
+
+```bash
+#!/bin/bash
+
+echo "🚀 Starting ACSQD Services with PM2..."
+
+# Check if PM2 is installed
+if ! command -v pm2 &> /dev/null; then
+    echo "❌ PM2 not found. Installing PM2..."
+    npm install -g pm2
+fi
+
+# Check if MongoDB is running
+if ! pgrep -x "mongod" > /dev/null; then
+    echo "⚠️  MongoDB is not running. Please start MongoDB first."
+    exit 1
+fi
+
+# Check if Ollama is running
+if ! pgrep -x "ollama" > /dev/null; then
+    echo "🦙 Starting Ollama..."
+    ollama serve &
+    sleep 5
+fi
+
+# Start services with PM2
+echo "📦 Starting services..."
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+
+echo "✅ All services started!"
+echo ""
+echo "📱 Frontend: http://localhost:3000"
+echo "🔧 Backend: http://localhost:3008"
+echo "🤖 ML Models: http://localhost:8000"
+echo ""
+echo "💡 Useful commands:"
+echo "   pm2 list          - View all processes"
+echo "   pm2 monit         - Monitor processes"
+echo "   pm2 logs          - View logs"
+echo "   pm2 stop all      - Stop all services"
+echo "   pm2 restart all   - Restart all services"
+```
+
+Make it executable:
+```bash
+chmod +x pm2-start.sh
+```
+
+## 🛑 Stopping Services
+
+### Stop All Services
+
+```bash
+# Stop all PM2 processes
+pm2 stop all
+
+# Delete all PM2 processes
+pm2 delete all
+
+# Stop Ollama
+pkill -f ollama
+```
+
+### Custom Stop Script
+
+Create `pm2-stop.sh`:
+
+```bash
+#!/bin/bash
+
+echo "🛑 Stopping ACSQD Services..."
+
+# Stop all PM2 processes
+pm2 stop all
+pm2 delete all
+
+# Stop Ollama
+if pgrep -x "ollama" > /dev/null; then
+    echo "🦙 Stopping Ollama..."
+    pkill -f ollama
+fi
+
+echo "✅ All services stopped!"
+```
+
+Make it executable:
+```bash
+chmod +x pm2-stop.sh
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Port Already in Use**
+   ```bash
+   # Check what's using the port
+   lsof -i :3008
+   lsof -i :3000
+   lsof -i :8000
+   
+   # Kill the process
+   kill -9 <PID>
+   ```
+
+2. **PM2 Process Not Starting**
+   ```bash
+   # Check PM2 logs
+   pm2 logs
+   
+   # Check specific service
+   pm2 logs acsqd-backend
+   
+   # Restart the service
+   pm2 restart acsqd-backend
+   ```
+
+3. **Environment Variables Not Loading**
+   ```bash
+   # Check environment variables
+   pm2 env acsqd-backend
+   
+   # Restart with environment
+   pm2 restart acsqd-backend --update-env
+   ```
+
+4. **Memory Issues**
+   ```bash
+   # Monitor memory usage
+   pm2 monit
+   
+   # Restart if needed
+   pm2 restart all
+   ```
+
+### Useful Commands
+
+```bash
+# View PM2 status
+pm2 status
+
+# View detailed process info
+pm2 show acsqd-backend
+
+# View PM2 configuration
+pm2 describe acsqd-backend
+
+# Update PM2
+pm2 update
+
+# Install PM2 plugins
+pm2 install pm2-logrotate
+pm2 install pm2-server-monit
+```
+
+## 📝 Summary
+
+This guide provides comprehensive instructions for using PM2 to manage the ACSQD project services. The key benefits of using PM2 include:
+
+- **Process Management**: Automatic restart on crashes
+- **Load Balancing**: Multiple instances for better performance
+- **Monitoring**: Real-time monitoring and logging
+- **Zero Downtime**: Reload without stopping services
+- **Startup Scripts**: Automatic startup on system boot
+
+For more information, visit the [PM2 documentation](https://pm2.keymetrics.io/docs/).

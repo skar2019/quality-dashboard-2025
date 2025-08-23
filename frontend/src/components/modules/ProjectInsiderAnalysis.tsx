@@ -33,10 +33,12 @@ import {
   Clear as ClearIcon,
   Assessment as AssessmentIcon,
   Chat as ChatIcon,
+  Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 import chatbotService, { ChatRequest, StructuredChatResponse } from '@/services/chatbot.service';
 import SummaryReportChat from './SummaryReportChat';
 import TaskListMessage from './TaskListMessage';
+import DeepAnalysis from '../DeepAnalysis';
 
 interface Message {
   id: string;
@@ -67,6 +69,7 @@ const ProjectInsiderAnalysis: React.FC = () => {
   const [projectsLoading, setProjectsLoading] = useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const summaryReportRef = useRef<any>(null);
+  const deepAnalysisRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -288,10 +291,15 @@ const ProjectInsiderAnalysis: React.FC = () => {
       setTimeout(() => {
         handleSendMessage();
       }, 100);
-    } else {
+    } else if (activeTab === 1) {
       // Summary Report tab - pass to SummaryReportChat component
       if (summaryReportRef.current) {
         summaryReportRef.current.handleSuggestedQuestion(question);
+      }
+    } else if (activeTab === 2) {
+      // Deep Analysis tab - pass to DeepAnalysis component
+      if (deepAnalysisRef.current) {
+        deepAnalysisRef.current.handleSuggestedQuestion(question);
       }
     }
   };
@@ -350,7 +358,7 @@ const ProjectInsiderAnalysis: React.FC = () => {
   ];
 
   const getCurrentQuestions = () => {
-    return activeTab === 0 ? projectAnalysisQuestions : summaryReportQuestions;
+    return activeTab === 0 ? projectAnalysisQuestions : activeTab === 1 ? summaryReportQuestions : summaryReportQuestions;
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -397,6 +405,12 @@ const ProjectInsiderAnalysis: React.FC = () => {
                 <Tab 
                   icon={<AssessmentIcon />} 
                   label="Summary Report" 
+                  iconPosition="start"
+                  sx={{ flexDirection: 'row', gap: 1 }}
+                />
+                <Tab 
+                  icon={<PsychologyIcon />} 
+                  label="Deep Analysis" 
                   iconPosition="start"
                   sx={{ flexDirection: 'row', gap: 1 }}
                 />
@@ -674,8 +688,16 @@ const ProjectInsiderAnalysis: React.FC = () => {
               </Box>
             </Box>
           </>
+        ) : activeTab === 1 ? (
+          <SummaryReportChat 
+            ref={summaryReportRef}
+          />
         ) : (
-          <SummaryReportChat ref={summaryReportRef} />
+          <DeepAnalysis 
+            ref={deepAnalysisRef}
+            sprintFilter={selectedSprint}
+            projectFilter={selectedProject}
+          />
         )}
           </Paper>
         </Grid>

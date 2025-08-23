@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './../../style/login.css';
 import { Box } from '@mui/material';
@@ -19,6 +19,14 @@ const Login: React.FC = () => {
         password : ''
     });
 
+    // Debug environment variables on component mount
+    useEffect(() => {
+        console.log('🔧 Environment Variables Debug:');
+        console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+        console.log('NODE_ENV:', process.env.NODE_ENV);
+        console.log('All env vars:', process.env);
+    }, []);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prevState => ({
@@ -31,19 +39,37 @@ const Login: React.FC = () => {
         e.preventDefault();
 
         if(validateInput()) {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email, password: formData.password }),
-                credentials: 'include'
-              });
-              const user = await response.json();
-              if (response.ok) {
-                navigate('/dashboard');
-              } else {
-                alert(user.message || 'Login failed. Please try again.');
-              }
+            // Debug logging
+            console.log('🔍 Login Debug Info:');
+            console.log('Environment API URL:', process.env.REACT_APP_API_URL);
+            console.log('Full Login URL:', `${process.env.REACT_APP_API_URL}/api/user/login`);
+            console.log('Login credentials:', { email: formData.email, password: '***' });
             
+            try {
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: formData.email, password: formData.password }),
+                    credentials: 'include'
+                });
+                
+                console.log('🔍 Login Response Status:', response.status);
+                console.log('🔍 Login Response Headers:', response.headers);
+                
+                const user = await response.json();
+                console.log('🔍 Login Response Data:', user);
+                
+                if (response.ok) {
+                    console.log('✅ Login successful, navigating to dashboard');
+                    navigate('/dashboard');
+                } else {
+                    console.error('❌ Login failed:', user.message);
+                    alert(user.message || 'Login failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('❌ Login request failed:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
         }
     };
 

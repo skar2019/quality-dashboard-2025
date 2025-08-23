@@ -36,6 +36,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Analytics as AnalyticsIcon, // ADD THIS IMPORT for Project Insider Analysis icon
+  Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 300;
@@ -58,7 +59,7 @@ const menuItems = [
   { text: 'Project Admin Management', icon: <PeopleIcon />, path: '/dashboard/admin/users' },
   { text: 'Jira Report Import', icon: <CloudUploadIcon />, path: '/dashboard/jira-report-import' },
   { text: 'Sprint Explore', icon: <TableChartIcon />, path: '/dashboard/data-viewer' },
-  { text: 'Insider (AI Assistant)', icon: <AnalyticsIcon />, path: '/dashboard/project-insider-analysis' },
+  { text: 'Project Insider Analysis', icon: <AnalyticsIcon />, path: '/dashboard/project-insider-analysis' },
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
