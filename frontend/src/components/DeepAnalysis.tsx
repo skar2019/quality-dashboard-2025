@@ -74,8 +74,71 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
   const [error, setError] = useState<string | null>(null);
   const [selectedSprint, setSelectedSprint] = useState<string>(sprintFilter || '');
   const [selectedProject, setSelectedProject] = useState<string>(projectFilter || '');
+  const [availableProjects, setAvailableProjects] = useState<Array<{id: string, name: string}>>([]);
+  const [projectsLoading, setProjectsLoading] = useState<boolean>(true);
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Handle project selection change
+  const handleProjectChange = (e: SelectChangeEvent) => {
+    const newProject = e.target.value;
+    setSelectedProject(newProject);
+    
+    // If "All Projects" is selected, clear sprint selection
+    if (newProject === "") {
+      setSelectedSprint("");
+    }
+  };
+
+  // Fetch available projects on component mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setProjectsLoading(true);
+        const response = await fetch('/api/projects', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Projects API response:', data);
+          
+          // Handle different possible API response structures
+          let projectsArray = [];
+          if (Array.isArray(data)) {
+            projectsArray = data;
+          } else if (data && Array.isArray(data.data)) {
+            projectsArray = data.data;
+          } else if (data && Array.isArray(data.projects)) {
+            projectsArray = data.projects;
+          } else {
+            console.warn('API response does not contain a valid projects array:', data);
+            projectsArray = [];
+          }
+          
+          // Format projects for dropdown
+          const formattedProjects = projectsArray.map((project: any) => ({
+            id: project.id || project._id || project.projectId,
+            name: project.name || project.title || project.projectName || `Project ${project.id || project._id}`
+          }));
+          
+          console.log('Formatted projects for dropdown:', formattedProjects);
+          setAvailableProjects(formattedProjects);
+        } else {
+          console.error('Failed to fetch projects from API');
+          // Fallback to empty array if API fails
+          setAvailableProjects([]);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        setAvailableProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+    
+    fetchProjects();
+  }, []);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -726,13 +789,15 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
               <Select
                 value={selectedProject}
                 label="Project"
-                onChange={(e: SelectChangeEvent) => setSelectedProject(e.target.value)}
-                disabled={isLoading}
+                onChange={handleProjectChange}
+                disabled={isLoading || projectsLoading}
               >
                 <MenuItem value="">All Projects</MenuItem>
-                <MenuItem value="Adani">Adani</MenuItem>
-                <MenuItem value="Mobile App">Mobile App</MenuItem>
-                <MenuItem value="Web Platform">Web Platform</MenuItem>
+                {availableProjects.map((project) => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
