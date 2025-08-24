@@ -118,7 +118,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           
           // Format projects for dropdown
           const formattedProjects = projectsArray.map((project: any) => ({
-            id: project.id || project._id || project.projectId,
+            id: project.name || project.title || project.projectName || `Project ${project.id || project._id}`,
             name: project.name || project.title || project.projectName || `Project ${project.id || project._id}`
           }));
           

@@ -84,6 +84,19 @@ class DeepAnalysisRAG:
                 logger.info("No documents found in vectorstore")
                 return {"projects": {}, "total_docs": 0}
             
+            # Get unique projects and sprints from the data for debugging
+            unique_projects = set()
+            unique_sprints = set()
+            for i, doc in enumerate(all_docs['documents']):
+                metadata = all_docs['metadatas'][i] if all_docs['metadatas'] else {}
+                if metadata.get('project_id'):
+                    unique_projects.add(metadata['project_id'])
+                if metadata.get('sprint_id'):
+                    unique_sprints.add(metadata['sprint_id'])
+            
+            logger.info(f"Debug: Available projects in database: {list(unique_projects)}")
+            logger.info(f"Debug: Available sprints in database: {list(unique_sprints)}")
+            
             projects_data = {}
             total_docs_processed = 0
             total_docs_filtered = 0
@@ -91,7 +104,7 @@ class DeepAnalysisRAG:
             for i, doc in enumerate(all_docs['documents']):
                 metadata = all_docs['metadatas'][i] if all_docs['metadatas'] else {}
                 
-                # Apply filters
+                # Apply sprint filter
                 if sprint_filter:
                     sprint_id = metadata.get('sprint_id', '')
                     sprint_filter_lower = sprint_filter.lower()
@@ -108,19 +121,27 @@ class DeepAnalysisRAG:
                     else:
                         logger.debug(f"Sprint filter '{sprint_filter}' matches '{sprint_id}'")
                 
+                # Apply project filter - be more flexible
                 if project_filter:
                     project_id = metadata.get('project_id', '')
                     project_filter_lower = project_filter.lower()
                     project_id_lower = project_id.lower()
                     
-                    # Handle different project name formats
-                    if (project_filter_lower not in project_id_lower and 
-                        project_id_lower not in project_filter_lower):
-                        logger.debug(f"Project filter '{project_filter}' doesn't match '{project_id}'")
-                        total_docs_filtered += 1
-                        continue
+                    # If project_filter looks like a MongoDB ObjectId, skip project filtering
+                    # (ObjectIds are 24-character hex strings)
+                    if len(project_filter) == 24 and all(c in '0123456789abcdef' for c in project_filter.lower()):
+                        logger.info(f"Project filter '{project_filter}' appears to be a MongoDB ObjectId, skipping project filtering")
+                        # Don't filter by project, include all projects
+                        pass
                     else:
-                        logger.debug(f"Project filter '{project_filter}' matches '{project_id}'")
+                        # Handle different project name formats
+                        if (project_filter_lower not in project_id_lower and 
+                            project_id_lower not in project_filter_lower):
+                            logger.debug(f"Project filter '{project_filter}' doesn't match '{project_id}'")
+                            total_docs_filtered += 1
+                            continue
+                        else:
+                            logger.debug(f"Project filter '{project_filter}' matches '{project_id}'")
                 
                 total_docs_processed += 1
                 
