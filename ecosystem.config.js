@@ -93,6 +93,54 @@ module.exports = {
       out_file: './logs/out.log',
       error_file: './logs/error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'mongo-client-server',
+      cwd: './mongo-client/server',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 5001,
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 5001,
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0'
+      },
+      watch: ['*.js'],
+      ignore_watch: ['node_modules', 'logs'],
+      log_file: './logs/mongo-client-server.log',
+      out_file: './logs/mongo-client-server-out.log',
+      error_file: './logs/mongo-client-server-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'mongo-client-frontend',
+      cwd: './mongo-client/client',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3010,
+        REACT_APP_API_URL: 'http://localhost:5001'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3010,
+        REACT_APP_API_URL: 'http://10.42.68.175:5001'
+      },
+      watch: ['src'],
+      ignore_watch: ['node_modules', 'build'],
+      log_file: './logs/mongo-client-frontend.log',
+      out_file: './logs/mongo-client-frontend-out.log',
+      error_file: './logs/mongo-client-frontend-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
 };

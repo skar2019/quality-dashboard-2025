@@ -367,22 +367,38 @@ interface ApiResponse {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  'To Do': '#E3F2FD',
-  'In Progress': '#FF9D00',
-  'In Review': '#0066CC',
-  'Done': '#36B37E',
-  'Blocked': '#E34850',
-  'Other': '#BDBDBD',
+  'To Do': '#1473E6', // Bright Blue for better visibility
+  'In Progress': '#FF9D00', // Orange
+  'In Review': '#0066CC', // Blue
+  'Done': '#36B37E', // Green
+  'Blocked': '#E34850', // Red
+  'Other': '#6B6B6B', // Dark Gray
 };
-const STATUS_LABEL_COLORS: Record<string, string> = {
-  'To Do': '#1473E6', // Adobe Blue for label
-  'In Progress': '#FF9D00', // Adobe Warning Orange
-  'In Review': '#0066CC', // Adobe Info Blue
-  'Done': '#36B37E', // Adobe Success Green
-  'Blocked': '#E34850', // Adobe Error Red
-  'Other': '#6B6B6B', // Adobe Secondary Text
-};
+
 const STATUS_LABELS = ['To Do', 'In Progress', 'In Review', 'Done', 'Blocked'];
+
+// Priority colors and labels
+const PRIORITY_COLORS: Record<string, string> = {
+  'High': '#E34850', // Bright Red
+  'Medium': '#FF9D00', // Orange
+  'Low': '#36B37E', // Green
+  'Critical': '#8B0000', // Dark Red
+  'Blocker': '#4A0000', // Very Dark Red
+  'Other': '#6B6B6B', // Dark Gray
+};
+const PRIORITY_LABELS = ['High', 'Medium', 'Low', 'Critical', 'Blocker'];
+
+// Issue Type colors and labels
+const ISSUE_TYPE_COLORS: Record<string, string> = {
+  'Bug': '#E34850', // Bright Red
+  'Story': '#36B37E', // Green
+  'Task': '#1473E6', // Blue
+  'Improvement': '#FF9D00', // Orange
+  'Epic': '#8B5CF6', // Purple
+  'Sub-task': '#10B981', // Emerald
+  'Other': '#6B6B6B', // Dark Gray
+};
+const ISSUE_TYPE_LABELS = ['Bug', 'Story', 'Task', 'Improvement', 'Epic', 'Sub-task'];
 
 const normalizeStatus = (status: string) => {
   if (!status) return 'Other';
@@ -395,28 +411,30 @@ const normalizeStatus = (status: string) => {
   return 'Other';
 };
 
-// Custom label for PieChart
-const renderCustomizedLabel = (props: any) => {
-  const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  return percent > 0 ? (
-    <text
-      x={x}
-      y={y}
-      fill={STATUS_LABEL_COLORS[name] || STATUS_LABEL_COLORS['Other']}
-      fontSize={15}
-      fontWeight={700}
-      textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central"
-      style={{ textShadow: '0 1px 2px #fff' }}
-    >
-      {`${name}: ${(percent * 100).toFixed(0)}%`}
-    </text>
-  ) : null;
+const normalizePriority = (priority: string) => {
+  if (!priority) return 'Other';
+  const p = priority.trim().toLowerCase();
+  if (p === 'high' || p === 'highest') return 'High';
+  if (p === 'medium' || p === 'medium') return 'Medium';
+  if (p === 'low' || p === 'lowest') return 'Low';
+  if (p === 'critical' || p === 'urgent') return 'Critical';
+  if (p === 'blocker') return 'Blocker';
+  return 'Other';
 };
+
+const normalizeIssueType = (issueType: string) => {
+  if (!issueType) return 'Other';
+  const it = issueType.trim().toLowerCase();
+  if (it === 'bug' || it === 'defect') return 'Bug';
+  if (it === 'story' || it === 'user story') return 'Story';
+  if (it === 'task') return 'Task';
+  if (it === 'improvement' || it === 'enhancement') return 'Improvement';
+  if (it === 'epic') return 'Epic';
+  if (it === 'sub-task' || it === 'subtask') return 'Sub-task';
+  return 'Other';
+};
+
+
 
 const ExecutiveOverview: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -429,6 +447,8 @@ const ExecutiveOverview: React.FC = () => {
   const [statusData, setStatusData] = useState<any[]>([]);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [priorityData, setPriorityData] = useState<any[]>([]);
+  const [issueTypeData, setIssueTypeData] = useState<any[]>([]);
   const [autoSelecting, setAutoSelecting] = useState(false);
   const [autoSelected, setAutoSelected] = useState(false);
 
@@ -627,6 +647,8 @@ const ExecutiveOverview: React.FC = () => {
     setStatusLoading(true);
     setStatusError(null);
     setStatusData([]);
+    setPriorityData([]);
+    setIssueTypeData([]);
     try {
       const projectToAnalyze = projectId || selectedProject;
       console.log('Analyzing project:', projectToAnalyze);
@@ -665,34 +687,73 @@ const ExecutiveOverview: React.FC = () => {
       
       // Calculate status distribution
       const statusCounts: Record<string, number> = {};
+      const priorityCounts: Record<string, number> = {};
+      const issueTypeCounts: Record<string, number> = {};
       let total = 0;
-      let otherCount = 0;
+      let statusOtherCount = 0;
+      let priorityOtherCount = 0;
+      let issueTypeOtherCount = 0;
       
       allIssues.forEach((issue: any) => {
-        const label = normalizeStatus(issue.status);
-        if (STATUS_LABELS.includes(label)) {
-          statusCounts[label] = (statusCounts[label] || 0) + 1;
+        // Status distribution
+        const statusLabel = normalizeStatus(issue.status);
+        if (STATUS_LABELS.includes(statusLabel)) {
+          statusCounts[statusLabel] = (statusCounts[statusLabel] || 0) + 1;
         } else {
-          otherCount += 1;
+          statusOtherCount += 1;
         }
+        
+        // Priority distribution
+        const priorityLabel = normalizePriority(issue.priority);
+        if (PRIORITY_LABELS.includes(priorityLabel)) {
+          priorityCounts[priorityLabel] = (priorityCounts[priorityLabel] || 0) + 1;
+        } else {
+          priorityOtherCount += 1;
+        }
+        
+        // Issue type distribution
+        const issueTypeLabel = normalizeIssueType(issue.issueType || issue.type);
+        if (ISSUE_TYPE_LABELS.includes(issueTypeLabel)) {
+          issueTypeCounts[issueTypeLabel] = (issueTypeCounts[issueTypeLabel] || 0) + 1;
+        } else {
+          issueTypeOtherCount += 1;
+        }
+        
         total += 1;
       });
       
-      if (otherCount > 0) statusCounts['Other'] = otherCount;
+      // Add "Other" categories if needed
+      if (statusOtherCount > 0) statusCounts['Other'] = statusOtherCount;
+      if (priorityOtherCount > 0) priorityCounts['Other'] = priorityOtherCount;
+      if (issueTypeOtherCount > 0) issueTypeCounts['Other'] = issueTypeOtherCount;
       
       console.log('Status distribution:', statusCounts);
+      console.log('Priority distribution:', priorityCounts);
+      console.log('Issue type distribution:', issueTypeCounts);
       console.log('Total issues processed:', total);
       
-      // Prepare data for PieChart
-      const chartData = Object.entries(statusCounts).map(([name, value]) => ({
+      // Prepare data for PieCharts
+      const statusChartData = Object.entries(statusCounts).map(([name, value]) => ({
         name,
         value,
       })).filter(d => d.value > 0);
       
-      setStatusData(chartData);
+      const priorityChartData = Object.entries(priorityCounts).map(([name, value]) => ({
+        name,
+        value,
+      })).filter(d => d.value > 0);
+      
+      const issueTypeChartData = Object.entries(issueTypeCounts).map(([name, value]) => ({
+        name,
+        value,
+      })).filter(d => d.value > 0);
+      
+      setStatusData(statusChartData);
+      setPriorityData(priorityChartData);
+      setIssueTypeData(issueTypeChartData);
     } catch (err) {
       console.error('Error in handleAnalyse:', err);
-      setStatusError('Failed to fetch status distribution.');
+      setStatusError('Failed to fetch project data.');
     } finally {
       setStatusLoading(false);
     }
@@ -894,7 +955,7 @@ const ExecutiveOverview: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* Issue Status Distribution Chart */}
+      {/* Loading and Error States */}
       {statusLoading && (
         <Box sx={{ my: 4, textAlign: 'center' }}>
           <CircularProgress />
@@ -905,54 +966,201 @@ const ExecutiveOverview: React.FC = () => {
           <Alert severity="error">{statusError}</Alert>
         </Box>
       )}
-      {statusData.length > 0 && !statusLoading && !statusError && (
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Issue Status Distribution
-          </Typography>
-          <ResponsiveContainer width="100%" height={320}>
-            <PieChart>
-              <Pie
-                data={statusData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={110}
-                label={renderCustomizedLabel}
-                isAnimationActive
-              >
-                {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || STATUS_COLORS['Other']} />
-                ))}
-              </Pie>
-              <RechartsTooltip 
-                formatter={(value: any, name: any, props: any) => {
-                  const total = statusData.reduce((sum, d) => sum + d.value, 0);
-                  const percent = total ? ((value / total) * 100).toFixed(0) : 0;
-                  return [`${value} (${percent}%)`, name];
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          {/* Legend */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
-            {statusData.map((entry) => (
-              <Box key={entry.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 16, height: 16, bgcolor: STATUS_COLORS[entry.name] || STATUS_COLORS['Other'], borderRadius: '50%', border: '1px solid #ccc' }} />
-                <Typography variant="body2" fontWeight={600} color={STATUS_LABEL_COLORS[entry.name] || STATUS_LABEL_COLORS['Other']}>
-                  {entry.name}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-      )}
       {statusData.length === 0 && !statusLoading && !statusError && (
         <Box sx={{ my: 4 }}>
-          <Alert severity="info">No issue status data found for this project.</Alert>
+          <Alert severity="info">No issue data found for this project.</Alert>
         </Box>
+      )}
+
+      {/* Three Pie Charts Section - Status, Priority, and Issue Type */}
+      {statusData.length > 0 && !statusLoading && !statusError && (
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {/* Status Breakdown Chart */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom align="center">
+                Status Breakdown
+              </Typography>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    label={({ name, value, percent }) => `${name}\n${value} (${(percent * 100).toFixed(0)}%)`}
+                    isAnimationActive
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || STATUS_COLORS['Other']} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: any, name: any) => {
+                      const total = statusData.reduce((sum, d) => sum + d.value, 0);
+                      const percent = total ? ((value / total) * 100).toFixed(0) : 0;
+                      return [`${value} (${percent}%)`, name];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Status Legend */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+                {statusData.map((entry) => (
+                  <Box key={entry.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        bgcolor: STATUS_COLORS[entry.name] || STATUS_COLORS['Other'], 
+                        borderRadius: '50%', 
+                        border: '1px solid #ccc',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }} 
+                    />
+                    <Typography 
+                      variant="body2" 
+                      fontWeight={600} 
+                      sx={{ 
+                        color: STATUS_COLORS[entry.name] || STATUS_COLORS['Other'],
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      {entry.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Priority Breakdown Chart */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom align="center">
+                Priority Breakdown
+              </Typography>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={priorityData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    label={({ name, value, percent }) => `${name}\n${value} (${(percent * 100).toFixed(0)}%)`}
+                    isAnimationActive
+                  >
+                    {priorityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[entry.name] || '#8884d8'} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: any, name: any) => {
+                      const total = priorityData.reduce((sum, d) => sum + d.value, 0);
+                      const percent = total ? ((value / total) * 100).toFixed(0) : 0;
+                      return [`${value} (${percent}%)`, name];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Priority Legend */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+                {priorityData.map((entry) => (
+                  <Box key={entry.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        bgcolor: PRIORITY_COLORS[entry.name] || '#8884d8', 
+                        borderRadius: '50%', 
+                        border: '1px solid #ccc',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }} 
+                    />
+                    <Typography 
+                      variant="body2" 
+                      fontWeight={600} 
+                      sx={{ 
+                        color: PRIORITY_COLORS[entry.name] || '#8884d8',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      {entry.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Issue Type Breakdown Chart */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom align="center">
+                Issue Type Breakdown
+              </Typography>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={issueTypeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    isAnimationActive
+                  >
+                    {issueTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={ISSUE_TYPE_COLORS[entry.name] || '#8884d8'} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: any, name: any) => {
+                      const total = issueTypeData.reduce((sum, d) => sum + d.value, 0);
+                      const percent = total ? ((value / total) * 100).toFixed(0) : 0;
+                      return [`${value} (${percent}%)`, name];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Issue Type Legend */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+                {issueTypeData.map((entry) => (
+                  <Box key={entry.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box 
+                      sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        bgcolor: ISSUE_TYPE_COLORS[entry.name] || '#8884d8', 
+                        borderRadius: '50%', 
+                        border: '1px solid #ccc',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }} 
+                    />
+                    <Typography 
+                      variant="body2" 
+                      fontWeight={600} 
+                      sx={{ 
+                        color: ISSUE_TYPE_COLORS[entry.name] || '#8884d8',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      {entry.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
       )}
 
       {/* Sprint Velocity Trend and Burndown Analysis - Side by Side */}

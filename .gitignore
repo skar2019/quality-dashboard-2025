@@ -2,6 +2,8 @@
 
 # dependencies
 **/node_modules
+mongo-client/server/node_modules
+mongo-client/client/node_modules
 **/pnp
 **/pnp.js
 

@@ -15,4 +15,9 @@ python-multipart
 aiofiles
 httpx
 requests
-scikit-learn 
+scikit-learn
+# Performance optimization dependencies
+psutil>=5.9.0
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0 

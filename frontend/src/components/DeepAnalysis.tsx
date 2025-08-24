@@ -79,6 +79,21 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    // Use setTimeout to ensure content is rendered before scrolling
+    const timeoutId = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages]);
+
+  // Manual scroll to bottom function
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   // Handle project selection change
   const handleProjectChange = (e: SelectChangeEvent) => {
     const newProject = e.target.value;
@@ -118,7 +133,7 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
           
           // Format projects for dropdown
           const formattedProjects = projectsArray.map((project: any) => ({
-            id: project.id || project._id || project.projectId,
+            id: project.name || project.title || project.projectName || `Project ${project.id || project._id}`,
             name: project.name || project.title || project.projectName || `Project ${project.id || project._id}`
           }));
           
@@ -188,6 +203,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
     setInputText('');
     setIsLoading(true);
     setError(null);
+    
+    // Scroll to bottom immediately when user sends message
+    setTimeout(() => {
+      scrollToBottom();
+    }, 50);
 
     try {
       const request: DeepAnalysisRequest = {
@@ -216,6 +236,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             : msg
         ).concat(analysisMessage)
       );
+      
+      // Scroll to bottom after analysis is complete
+      setTimeout(() => {
+        scrollToBottom();
+      }, 200);
     } catch (err: any) {
       console.error('Summary report error:', err);
       
@@ -243,6 +268,11 @@ const DeepAnalysis = forwardRef<any, DeepAnalysisProps>(({ sprintFilter, project
             : msg
         )
       );
+      
+      // Scroll to bottom after error message
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
       } finally {
         setIsLoading(false);
       }
