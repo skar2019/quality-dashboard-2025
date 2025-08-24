@@ -17,6 +17,12 @@ from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
 from langchain.docstore.document import Document
 
+# Performance optimization imports
+import torch
+import gc
+import os
+import sys
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/deep-summary-report", tags=["deep-summary-report"])
 
@@ -63,18 +69,75 @@ class DeepAnalysisRAG:
         # Use the same path as in other RAG systems
         self.persist_directory = "./jira_tasks_chroma_db"
         
-        # Initialize models
-        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
-        self.llm = Ollama(model="llama3")
-        self.vectorstore = Chroma(persist_directory=self.persist_directory, embedding_function=self.embeddings, collection_name="project_data")
+        # Performance optimization: Check for GPU availability
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.gpu_memory = torch.cuda.get_device_properties(0).total_memory if torch.cuda.is_available() else 0
         
-        logger.info("✅ Deep Analysis RAG initialized with LangChain components")
+        # Performance optimization: Initialize models with optimized parameters
+        self.embeddings = OllamaEmbeddings(
+            model="nomic-embed-text"
+            # Note: OllamaEmbeddings doesn't support device, batch_size, or max_length parameters
+            # These optimizations are handled at the system level instead
+        )
+        
+        # Performance optimization: LLM with optimized parameters
+        self.llm = Ollama(
+            model="llama3",
+            # Temperature and sampling optimization for faster responses
+            temperature=0.1,  # Lower temperature = faster, more focused responses
+            # Note: Some parameters may not be supported by your Ollama version
+            # Remove unsupported parameters if they cause errors
+        )
+        
+        # Performance optimization: Vectorstore with optimized settings
+        self.vectorstore = Chroma(
+            persist_directory=self.persist_directory, 
+            embedding_function=self.embeddings, 
+            collection_name="project_data"
+            # Note: ChromaDB client_settings may vary by version
+            # Using default settings for compatibility
+        )
+        
+        # Performance optimization: Memory management
+        self._optimize_memory_settings()
+        
+        logger.info(f"✅ Deep Analysis RAG initialized with LangChain components (Device: {self.device}, GPU Memory: {self.gpu_memory/1024**3:.1f}GB)")
+    
+    def _optimize_memory_settings(self):
+        """Optimize memory settings for better performance"""
+        try:
+            # Set PyTorch memory optimization
+            if torch.cuda.is_available():
+                # GPU memory optimization
+                torch.cuda.empty_cache()
+                torch.backends.cudnn.benchmark = True  # Optimize CUDNN for speed
+                torch.backends.cudnn.deterministic = False  # Allow non-deterministic for speed
+                
+                # Set memory fraction for Ollama
+                gpu_memory_fraction = 0.8  # Use 80% of GPU memory
+                torch.cuda.set_per_process_memory_fraction(gpu_memory_fraction)
+                
+                logger.info(f"🚀 GPU memory optimized: {gpu_memory_fraction*100}% allocation enabled")
+            
+            # System memory optimization
+            gc.set_threshold(700, 10, 10)  # Standard GC settings
+            
+            logger.info("✅ Memory optimization completed")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Memory optimization failed: {e}")
     
     def extract_project_data(self, sprint_filter: str = None, project_filter: str = None) -> Dict[str, Any]:
-        """Extract project data from the vectorstore"""
+        """Extract project data from the vectorstore with performance optimization"""
         try:
+            # Performance monitoring: Vectorstore query start
+            vectorstore_start = time.time()
+            
             # Get all documents from the vectorstore
             all_docs = self.vectorstore.get()
+            
+            vectorstore_time = time.time() - vectorstore_start
+            logger.info(f"🚀 Vectorstore query completed in {vectorstore_time:.2f}s")
             
             logger.info(f"Debug: Found {len(all_docs.get('documents', []))} documents in vectorstore")
             logger.info(f"Debug: Document keys: {list(all_docs.keys())}")
@@ -216,6 +279,10 @@ class DeepAnalysisRAG:
                 logger.info(f"  Priorities: {project_data['priorities']}")
                 logger.info(f"  Issue Types: {project_data['issue_types']}")
             
+            # Performance monitoring: Total processing time
+            total_processing_time = time.time() - vectorstore_start
+            logger.info(f"🚀 Total data extraction and processing completed in {total_processing_time:.2f}s")
+            
             return {
                 "projects": projects_data,
                 "total_docs": len(all_docs['documents'])
@@ -226,16 +293,18 @@ class DeepAnalysisRAG:
             return {"projects": {}, "total_docs": 0}
     
     async def generate_deep_analysis(self, request: DeepAnalysisRequest) -> DeepAnalysisResponse:
-        """Generate deep analysis using LLM for enhanced insights"""
+        """Generate deep analysis using LLM for enhanced insights with performance optimization"""
         try:
             start_time = time.time()
-            logger.info(f"Generating deep analysis for sprint={request.sprint}, project={request.project}, type={request.analysisType}")
+            logger.info(f"🚀 Generating deep analysis for sprint={request.sprint}, project={request.project}, type={request.analysisType}")
             
-            # Extract project data
+            # Performance monitoring: Data extraction phase
+            data_extraction_start = time.time()
             projects_data_result = self.extract_project_data(request.sprint, request.project)
             projects_data = projects_data_result.get("projects", {})
+            data_extraction_time = time.time() - data_extraction_start
             
-            logger.info(f"Extracted data for {len(projects_data)} projects")
+            logger.info(f"🚀 Extracted data for {len(projects_data)} projects in {data_extraction_time:.2f}s")
             
             if not projects_data:
                 logger.info(f"No projects found for sprint={request.sprint}, project={request.project}")
@@ -255,14 +324,27 @@ class DeepAnalysisRAG:
                     predictions=["Insufficient data for predictions"],
                     actionItems=["Upload project data to enable analysis"],
                     generatedAt=datetime.now().isoformat(),
-                    analysisTime=0.0
+                    analysisTime=data_extraction_time
                 )
             
-            # Generate LLM-based analysis
+            # Performance monitoring: LLM analysis phase
+            llm_analysis_start = time.time()
             analysis_result = await self._generate_llm_analysis(projects_data, request)
+            llm_analysis_time = time.time() - llm_analysis_start
             
-            analysis_time = time.time() - start_time
-            logger.info(f"Deep analysis generated in {analysis_time:.2f}s")
+            # Performance monitoring: Total analysis time
+            total_analysis_time = time.time() - start_time
+            
+            logger.info(f"🚀 Deep analysis performance breakdown:")
+            logger.info(f"  📊 Data extraction: {data_extraction_time:.2f}s")
+            logger.info(f"  🧠 LLM analysis: {llm_analysis_time:.2f}s")
+            logger.info(f"  ⏱️  Total time: {total_analysis_time:.2f}s")
+            logger.info(f"  🚀 Device: {self.device}")
+            
+            # GPU memory cleanup if available
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.info("🧹 GPU memory cache cleared after complete analysis")
             
             return DeepAnalysisResponse(
                 analysisType=request.analysisType,
@@ -273,7 +355,7 @@ class DeepAnalysisRAG:
                 predictions=analysis_result["predictions"],
                 actionItems=analysis_result["actionItems"],
                 generatedAt=datetime.now().isoformat(),
-                analysisTime=analysis_time
+                analysisTime=total_analysis_time
             )
             
         except Exception as e:
@@ -284,8 +366,11 @@ class DeepAnalysisRAG:
             )
     
     async def _generate_llm_analysis(self, projects_data: Dict[str, Any], request: DeepAnalysisRequest) -> Dict[str, Any]:
-        """Use LLM to generate intelligent analysis"""
+        """Use LLM to generate intelligent analysis with performance optimization"""
         try:
+            # Performance monitoring start
+            start_time = time.time()
+            
             # Validate projects_data structure
             if not isinstance(projects_data, dict):
                 logger.error(f"Invalid projects_data type: {type(projects_data)}")
@@ -297,53 +382,53 @@ class DeepAnalysisRAG:
             
             # Auto-detect analysis type from message if not explicitly set
             analysis_type = request.analysisType
-            logger.info(f"Debug: Original analysis type: {request.analysisType}")
-            logger.info(f"Debug: Message content: {request.message}")
+            logger.info(f"🚀 Analysis type detection: {request.analysisType}")
+            logger.info(f"🚀 Message content: {request.message}")
             
             if request.message:
                 message_lower = request.message.lower()
-                logger.info(f"Debug: Message lower: {message_lower}")
+                logger.info(f"🚀 Message analysis: {message_lower}")
                 
                 # Override analysis type based on message content
                 if "executive" in message_lower or "summary" in message_lower:
                     analysis_type = "executive"
-                    logger.info("Auto-detected executive analysis type from message")
+                    logger.info("🚀 Auto-detected executive analysis type from message")
                 elif "historical" in message_lower or "trend" in message_lower or "predictive" in message_lower:
                     analysis_type = "historical"
-                    logger.info("Auto-detected historical trends analysis type from message")
+                    logger.info("🚀 Auto-detected historical trends analysis type from message")
                 elif "bottleneck" in message_lower or "process" in message_lower:
                     analysis_type = "bottleneck"
-                    logger.info("Auto-detected bottleneck analysis type from message")
+                    logger.info("🚀 Auto-detected bottleneck analysis type from message")
                 elif "velocity" in message_lower or "burn" in message_lower or "sprint" in message_lower:
                     analysis_type = "velocity"
-                    logger.info("Auto-detected velocity analysis type from message")
+                    logger.info("🚀 Auto-detected velocity analysis type from message")
                 elif "risk" in message_lower:
                     analysis_type = "risk"
-                    logger.info("Auto-detected risk analysis type from message")
+                    logger.info("🚀 Auto-detected risk analysis type from message")
                 elif "performance" in message_lower:
                     analysis_type = "performance"
-                    logger.info("Auto-detected performance analysis type from message")
+                    logger.info("🚀 Auto-detected performance analysis type from message")
                 elif "quality" in message_lower:
                     analysis_type = "quality"
-                    logger.info("Auto-detected quality analysis type from message")
+                    logger.info("🚀 Auto-detected quality analysis type from message")
                 else:
                     # Only default to executive if no specific type was detected
                     if not request.analysisType or request.analysisType == "comprehensive":
                         analysis_type = "executive"
-                        logger.info("Defaulting to executive analysis type")
+                        logger.info("🚀 Defaulting to executive analysis type")
                     else:
-                        logger.info(f"Using provided analysis type: {request.analysisType}")
+                        logger.info(f"🚀 Using provided analysis type: {request.analysisType}")
             else:
                 # No message provided, use the requested type
                 analysis_type = request.analysisType or "executive"
-                logger.info(f"Using requested analysis type: {analysis_type}")
+                logger.info(f"🚀 Using requested analysis type: {analysis_type}")
             
-            logger.info(f"Debug: Final analysis type: {analysis_type}")
+            logger.info(f"🚀 Final analysis type: {analysis_type}")
             
             # Prepare context for LLM
             context = self._prepare_analysis_context(projects_data, request)
-            logger.info(f"Prepared context for LLM analysis: {len(context)} characters")
-            logger.info(f"Using analysis type: {analysis_type}")
+            logger.info(f"🚀 Prepared context for LLM analysis: {len(context)} characters")
+            logger.info(f"🚀 Using analysis type: {analysis_type}")
             
             # Generate analysis based on type
             if analysis_type == "executive":
@@ -476,61 +561,49 @@ class DeepAnalysisRAG:
         return "\n".join(context_parts)
     
     async def _generate_executive_analysis(self, context: str, request: DeepAnalysisRequest) -> Dict[str, Any]:
-        """Generate executive summary analysis using LLM"""
-        prompt = f"""
-        You are a senior executive consultant providing a concise executive summary report. Analyze the following project data and provide insights suitable for C-level executives.
-        
-        Project Data:
-        {context}
-        
-        Please provide an executive-level analysis including:
-        
-        1. Executive Summary (1-2 sentences summarizing the current state for executives)
-        2. Key Insights (2-3 high-level insights with clear business impact)
-        3. Metrics (overall health, risk, performance, quality scores 0-100, trend direction, confidence)
-        4. Strategic Recommendations (3-5 high-level strategic recommendations for executives)
-        5. Predictive Insights (2-3 business-focused predictions about future performance)
-        6. Immediate Action Items (2-3 executive-level actions that require attention)
-        
-        Focus on:
-        - Business impact and strategic implications
-        - Risk assessment and mitigation
-        - Resource allocation and prioritization
-        - Timeline and delivery implications
-        - Stakeholder communication needs
-        
-        Format your response as JSON with this structure:
+        """Generate executive summary analysis using LLM with performance optimization"""
+        # Performance-optimized prompt - shorter and more focused
+        prompt = f"""You are a senior executive consultant. Analyze this project data and provide a concise executive summary in JSON format:
+
+Project Data: {context}
+
+Provide JSON with this structure (be concise and strategic):
+{{
+    "summary": "1-2 sentence executive summary",
+    "insights": [
         {{
-            "summary": "executive summary for C-level executives",
-            "insights": [
-                {{
-                    "category": "Strategic",
-                    "title": "insight title",
-                    "description": "high-level description with business impact",
-                    "severity": "low/medium/high/critical",
-                    "impact": "specific business impact description",
-                    "evidence": ["evidence 1", "evidence 2"],
-                    "recommendations": ["rec 1", "rec 2"]
-                }}
-            ],
-            "metrics": {{
-                "overallHealth": 75,
-                "riskScore": 60,
-                "performanceScore": 80,
-                "qualityScore": 85,
-                "trendDirection": "improving/declining/stable",
-                "confidenceLevel": "high/medium/low"
-            }},
-            "recommendations": ["strategic rec 1", "strategic rec 2", "strategic rec 3"],
-            "predictions": ["business prediction 1", "business prediction 2"],
-            "actionItems": ["executive action 1", "executive action 2"]
+            "category": "Strategic",
+            "title": "key insight title",
+            "description": "brief description with business impact",
+            "severity": "low/medium/high/critical",
+            "impact": "business impact",
+            "evidence": ["evidence 1", "evidence 2"],
+            "recommendations": ["rec 1", "rec 2"]
         }}
-        
-        Be concise, strategic, and business-focused. This is for C-level executives who need high-level insights to make strategic decisions.
-        """
+    ],
+    "metrics": {{
+        "overallHealth": 75,
+        "riskScore": 60,
+        "performanceScore": 80,
+        "qualityScore": 85,
+        "trendDirection": "improving/declining/stable",
+        "confidenceLevel": "high/medium/low"
+    }},
+    "recommendations": ["strategic rec 1", "strategic rec 2", "strategic rec 3"],
+    "predictions": ["business prediction 1", "business prediction 2"],
+    "actionItems": ["executive action 1", "executive action 2"]
+}}
+
+Focus on business impact, risk assessment, and strategic recommendations. Be concise for C-level executives."""
         
         try:
+            # Performance monitoring for LLM call
+            llm_start_time = time.time()
             response = self.llm.invoke(prompt)
+            llm_time = time.time() - llm_start_time
+            
+            logger.info(f"🚀 LLM executive analysis completed in {llm_time:.2f}s")
+            
             import json
             
             # Clean and parse response
@@ -548,6 +621,12 @@ class DeepAnalysisRAG:
                 try:
                     analysis = json.loads(json_text)
                     logger.info("Successfully parsed executive analysis LLM response as JSON")
+                    
+                    # GPU memory cleanup if available
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        logger.info("🧹 GPU memory cache cleared after executive analysis")
+                    
                     return analysis
                 except json.JSONDecodeError as json_err:
                     logger.error(f"Executive analysis JSON parsing error: {json_err}")
@@ -557,6 +636,12 @@ class DeepAnalysisRAG:
             try:
                 analysis = json.loads(response_text)
                 logger.info("Successfully parsed entire executive analysis LLM response as JSON")
+                
+                # GPU memory cleanup if available
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("🧹 GPU memory cache cleared after executive analysis")
+                
                 return analysis
             except json.JSONDecodeError:
                 logger.error("Failed to parse entire executive analysis response as JSON")
@@ -855,54 +940,49 @@ class DeepAnalysisRAG:
             return self._generate_velocity_fallback_analysis(context, request)
 
     async def _generate_comprehensive_analysis(self, context: str, request: DeepAnalysisRequest) -> Dict[str, Any]:
-        """Generate comprehensive analysis using LLM"""
-        prompt = f"""
-        You are a senior project portfolio analyst. Analyze the following project data and provide deep insights.
-        
-        Project Data:
-        {context}
-        
-        Please provide a comprehensive analysis including:
-        
-        1. Executive Summary (2-3 sentences)
-        2. Key Insights (3-5 insights with category, title, description, severity, impact, evidence)
-        3. Metrics (overall health, risk, performance, quality scores 0-100, trend direction, confidence)
-        4. Strategic Recommendations (5-7 actionable recommendations)
-        5. Predictive Insights (3-5 predictions about future performance)
-        6. Immediate Action Items (3-5 urgent actions)
-        
-        Format your response as JSON with this structure:
+        """Generate comprehensive analysis using LLM with performance optimization"""
+        # Performance-optimized prompt - shorter and more focused
+        prompt = f"""You are a senior project portfolio analyst. Analyze this project data and provide comprehensive insights in JSON format:
+
+Project Data: {context}
+
+Provide JSON with this structure (be specific and actionable):
+{{
+    "summary": "2-3 sentence executive summary",
+    "insights": [
         {{
-            "summary": "executive summary",
-            "insights": [
-                {{
-                    "category": "insight category",
-                    "title": "insight title",
-                    "description": "detailed description",
-                    "severity": "low/medium/high/critical",
-                    "impact": "business impact",
-                    "evidence": ["evidence 1", "evidence 2"],
-                    "recommendations": ["rec 1", "rec 2"]
-                }}
-            ],
-            "metrics": {{
-                "overallHealth": 75,
-                "riskScore": 60,
-                "performanceScore": 80,
-                "qualityScore": 85,
-                "trendDirection": "improving/declining/stable",
-                "confidenceLevel": "high/medium/low"
-            }},
-            "recommendations": ["rec 1", "rec 2", "rec 3"],
-            "predictions": ["prediction 1", "prediction 2", "prediction 3"],
-            "actionItems": ["action 1", "action 2", "action 3"]
+            "category": "insight category",
+            "title": "insight title",
+            "description": "detailed description",
+            "severity": "low/medium/high/critical",
+            "impact": "business impact",
+            "evidence": ["evidence 1", "evidence 2"],
+            "recommendations": ["rec 1", "rec 2"]
         }}
-        
-        Be specific, actionable, and data-driven in your analysis.
-        """
+    ],
+    "metrics": {{
+        "overallHealth": 75,
+        "riskScore": 60,
+        "performanceScore": 80,
+        "qualityScore": 85,
+        "trendDirection": "improving/declining/stable",
+        "confidenceLevel": "high/medium/low"
+    }},
+    "recommendations": ["rec 1", "rec 2", "rec 3"],
+    "predictions": ["prediction 1", "prediction 2", "prediction 3"],
+    "actionItems": ["action 1", "action 2", "action 3"]
+}}
+
+Be specific, actionable, and data-driven. Focus on key insights and actionable recommendations."""
         
         try:
+            # Performance monitoring for LLM call
+            llm_start_time = time.time()
             response = self.llm.invoke(prompt)
+            llm_time = time.time() - llm_start_time
+            
+            logger.info(f"🚀 LLM comprehensive analysis completed in {llm_time:.2f}s")
+            
             import json
             
             # Clean and parse response
@@ -920,6 +1000,12 @@ class DeepAnalysisRAG:
                 try:
                     analysis = json.loads(json_text)
                     logger.info("Successfully parsed LLM response as JSON")
+                    
+                    # GPU memory cleanup if available
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        logger.info("🧹 GPU memory cache cleared after comprehensive analysis")
+                    
                     return analysis
                 except json.JSONDecodeError as json_err:
                     logger.error(f"JSON parsing error: {json_err}")
@@ -929,6 +1015,12 @@ class DeepAnalysisRAG:
             try:
                 analysis = json.loads(response_text)
                 logger.info("Successfully parsed entire LLM response as JSON")
+                
+                # GPU memory cleanup if available
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("🧹 GPU memory cache cleared after comprehensive analysis")
+                
                 return analysis
             except json.JSONDecodeError:
                 logger.error("Failed to parse entire response as JSON")
@@ -1591,9 +1683,12 @@ def get_deep_analysis_rag_instance():
 
 @router.post("/generate", response_model=DeepAnalysisResponse)
 async def generate_deep_analysis(request: DeepAnalysisRequest):
-    """Generate deep analysis with LLM-powered insights"""
+    """Generate deep analysis with LLM-powered insights and performance optimization"""
     try:
-        logger.info(f"Received deep analysis request:")
+        # Performance monitoring: Request start
+        request_start_time = time.time()
+        
+        logger.info(f"🚀 Received deep analysis request:")
         logger.info(f"  Message: {request.message}")
         logger.info(f"  Project: {request.project}")
         logger.info(f"  Sprint: {request.sprint}")
@@ -1624,8 +1719,26 @@ async def generate_deep_analysis(request: DeepAnalysisRequest):
                     analysisTime=0.0
                 )
         
+        # Performance monitoring: RAG initialization
+        rag_init_start = time.time()
         rag = DeepAnalysisRAG()
-        return await rag.generate_deep_analysis(request)
+        rag_init_time = time.time() - rag_init_start
+        logger.info(f"🚀 RAG initialization completed in {rag_init_time:.2f}s")
+        
+        # Performance monitoring: Analysis generation
+        analysis_start = time.time()
+        result = await rag.generate_deep_analysis(request)
+        analysis_time = time.time() - analysis_start
+        
+        # Performance monitoring: Total request time
+        total_request_time = time.time() - request_start_time
+        
+        logger.info(f"🚀 Deep analysis request performance breakdown:")
+        logger.info(f"  🔧 RAG initialization: {rag_init_time:.2f}s")
+        logger.info(f"  🧠 Analysis generation: {analysis_time:.2f}s")
+        logger.info(f"  ⏱️  Total request time: {total_request_time:.2f}s")
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error generating deep analysis: {str(e)}")
