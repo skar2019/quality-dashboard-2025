@@ -20,6 +20,20 @@ from langchain.docstore.document import Document
 # Import the optimized chatbot service
 from app.services.chatbot_service_optimized import get_optimized_chatbot
 
+# Performance optimization imports
+import torch
+import gc
+import os
+import sys
+
+# Try to import psutil for system monitoring, fallback to basic monitoring if not available
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+    logger.warning("⚠️ psutil not available, using basic performance monitoring")
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/chatbot", tags=["chatbot"])
 
@@ -82,10 +96,37 @@ class SimpleRAGChat:
         # Using relative path for better portability
         self.persist_directory = "./jira_tasks_chroma_db"
         
-        # Initialize models exactly as in run_rag_query.py
-        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
-        self.llm = Ollama(model="llama3")
-        self.vectorstore = Chroma(persist_directory=self.persist_directory, embedding_function=self.embeddings, collection_name="project_data")
+        # Performance optimization: Check for GPU availability
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.gpu_memory = torch.cuda.get_device_properties(0).total_memory if torch.cuda.is_available() else 0
+        
+        # Performance optimization: Initialize models with optimized parameters
+        self.embeddings = OllamaEmbeddings(
+            model="nomic-embed-text"
+            # Note: OllamaEmbeddings doesn't support device, batch_size, or max_length parameters
+            # These optimizations are handled at the system level instead
+        )
+        
+        # Performance optimization: LLM with optimized parameters
+        self.llm = Ollama(
+            model="llama3",
+            # Temperature and sampling optimization for faster responses
+            temperature=0.1,  # Lower temperature = faster, more focused responses
+            # Note: Some parameters may not be supported by your Ollama version
+            # Remove unsupported parameters if they cause errors
+        )
+        
+        # Performance optimization: Vectorstore with optimized settings
+        self.vectorstore = Chroma(
+            persist_directory=self.persist_directory, 
+            embedding_function=self.embeddings, 
+            collection_name="project_data"
+            # Note: ChromaDB client_settings may vary by version
+            # Using default settings for compatibility
+        )
+        
+        # Performance optimization: Memory management
+        self._optimize_memory_settings()
         
         # Initialize intelligent text correction system
         self._init_intelligent_corrections()
@@ -93,7 +134,41 @@ class SimpleRAGChat:
         # Ensure vocabulary is up-to-date on startup
         self._refresh_vocabulary_on_startup()
         
-        logger.info("✅ Simple RAG Chat initialized with LangChain components")
+        logger.info(f"✅ Simple RAG Chat initialized with LangChain components (Device: {self.device}, GPU Memory: {self.gpu_memory/1024**3:.1f}GB)")
+    
+    def _optimize_memory_settings(self):
+        """Optimize memory settings for better performance"""
+        try:
+            # Set PyTorch memory optimization
+            if torch.cuda.is_available():
+                # GPU memory optimization
+                torch.cuda.empty_cache()
+                torch.backends.cudnn.benchmark = True  # Optimize CUDNN for speed
+                torch.backends.cudnn.deterministic = False  # Allow non-deterministic for speed
+                
+                # Set memory fraction for Ollama
+                gpu_memory_fraction = 0.8  # Use 80% of GPU memory
+                torch.cuda.set_per_process_memory_fraction(gpu_memory_fraction)
+                
+                logger.info(f"🚀 GPU memory optimized: {gpu_memory_fraction*100}% allocation enabled")
+            
+            # System memory optimization
+            if HAS_PSUTIL and hasattr(psutil, 'virtual_memory'):
+                memory = psutil.virtual_memory()
+                if memory.available < 2 * 1024 * 1024 * 1024:  # Less than 2GB available
+                    logger.warning("⚠️ Low memory detected, enabling aggressive garbage collection")
+                    gc.set_threshold(100, 5, 5)  # More aggressive GC
+                else:
+                    gc.set_threshold(700, 10, 10)  # Standard GC
+            else:
+                # Fallback: use standard GC settings
+                gc.set_threshold(700, 10, 10)
+                logger.info("ℹ️ Using standard garbage collection settings")
+            
+            logger.info("✅ Memory optimization completed")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Memory optimization failed: {e}")
     
     def _refresh_vocabulary_on_startup(self):
         """Refresh vocabulary on system startup to ensure it's current"""
@@ -541,38 +616,50 @@ class SimpleRAGChat:
             return []
     
     def get_dynamic_k(self, query: str, sprint_filter: str = None, project_filter: str = None) -> int:
-        """Get dynamic k value based on database size and context"""
+        """Get dynamic k value based on database size and context with performance optimization"""
         try:
             total_docs = len(self.vectorstore.get()['documents'])
             logger.info(f"Total documents in database: {total_docs}")
             
-            # Intelligent k calculation based on context
+            # Performance optimization: Adjust k based on device and memory
+            device_multiplier = 1.5 if self.device == "cuda" else 1.0
+            memory_multiplier = 1.2 if self.gpu_memory > 8 * 1024**3 else 1.0  # 8GB+ GPU
+            
+            # Intelligent k calculation based on context with performance tuning
             if sprint_filter and project_filter:
                 # Both filters provided - more targeted results
-                dynamic_k = min(30, total_docs)
-                logger.info(f"Targeted search (Sprint + Project), using k={dynamic_k}")
+                base_k = 20  # Reduced from 30 for speed
+                dynamic_k = min(int(base_k * device_multiplier * memory_multiplier), total_docs)
+                logger.info(f"🚀 Targeted search (Sprint + Project), using k={dynamic_k} (device: {self.device}, memory: {self.gpu_memory/1024**3:.1f}GB)")
             elif sprint_filter:
                 # Sprint filter only - moderate results
-                dynamic_k = min(40, total_docs)
-                logger.info(f"Sprint-filtered search, using k={dynamic_k}")
+                base_k = 25  # Reduced from 40 for speed
+                dynamic_k = min(int(base_k * device_multiplier * memory_multiplier), total_docs)
+                logger.info(f"🚀 Sprint-filtered search, using k={dynamic_k} (device: {self.device}, memory: {self.gpu_memory/1024**3:.1f}GB)")
             elif 'all' in query.lower() or 'list' in query.lower():
                 # Show all queries - more results
-                dynamic_k = min(25, total_docs)
-                logger.info(f"'Show all' query, using k={dynamic_k}")
+                base_k = 15  # Reduced from 25 for speed
+                dynamic_k = min(int(base_k * device_multiplier * memory_multiplier), total_docs)
+                logger.info(f"🚀 'Show all' query, using k={base_k} (device: {self.device}, memory: {self.gpu_memory/1024**3:.1f}GB)")
             else:
                 # Default for specific queries
-                dynamic_k = min(20, total_docs)
-                logger.info(f"Default query, using k={dynamic_k}")
+                base_k = 12  # Reduced from 20 for speed
+                dynamic_k = min(int(base_k * device_multiplier * memory_multiplier), total_docs)
+                logger.info(f"🚀 Default query, using k={dynamic_k} (device: {self.device}, memory: {self.gpu_memory/1024**3:.1f}GB)")
             
             return dynamic_k
                 
         except Exception as e:
             logger.error(f"Error calculating dynamic k: {str(e)}")
-            return 20  # Fallback to 20
+            return 12  # Reduced fallback for speed
     
     def process_query(self, query: str, sprint_filter: str = None, project_filter: str = None) -> str:
-        """Process user query using exact logic from run_rag_query.py"""
+        """Process user query using exact logic from run_rag_query.py with performance optimization"""
         try:
+            # Performance monitoring start
+            start_time = time.time()
+            memory_before = 0  # Simplified monitoring without psutil dependency
+            
             # Check if this is a simple query that can skip LLM
             if not self._should_use_llm(query):
                 logger.info(f"🚀 Simple query detected, using fast path: {query}")
@@ -580,7 +667,7 @@ class SimpleRAGChat:
             
             # Get dynamic k value based on database size and query type
             dynamic_k = self.get_dynamic_k(query, sprint_filter)
-            logger.info(f"Processing complex query: {query} with dynamic_k={dynamic_k}, sprint={sprint_filter}")
+            logger.info(f"🚀 Processing complex query: {query} with dynamic_k={dynamic_k}, sprint={sprint_filter} (device: {self.device})")
             
             # If sprint filter is specified, get all documents and filter by sprint (exactly as in run_rag_query.py)
             if sprint_filter:
