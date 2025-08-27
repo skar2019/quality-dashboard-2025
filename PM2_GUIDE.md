@@ -204,11 +204,13 @@ module.exports = {
 | Service | Port | Description | Dependencies |
 |---------|------|-------------|--------------|
 | `acsqd-backend` | 3008 | Main backend API | MongoDB |
-| `acsqd-frontend` | 3000 | Main React frontend | Backend API |
+| `acsqd-frontend` | 3000 | Main React frontend (dev) | Backend API |
+| `acsqd-frontend-prod` | 3000 | Main React frontend (prod) | Backend API |
 | `acsqd-ollama` | 11434 | Ollama LLM service | None |
 | `acsqd-ml-models` | 8000 | Python ML models API | Ollama, MongoDB |
 | `mongo-client-server` | 5001 | MongoDB client backend | MongoDB |
-| `mongo-client-frontend` | 3010 | MongoDB client frontend | Mongo client server |
+| `mongo-client-frontend` | 3010 | MongoDB client frontend (dev) | Mongo client server |
+| `mongo-client-frontend-prod` | 3010 | MongoDB client frontend (prod) | Mongo client server |
 
 ## 🚀 Basic PM2 Commands
 
@@ -223,6 +225,10 @@ pm2 start ecosystem.config.js --env development
 
 # Start all services in production mode
 pm2 start ecosystem.config.js --env production
+
+# Start production frontend services (build + serve static files)
+pm2 start ecosystem.config.js --only acsqd-frontend-prod
+pm2 start ecosystem.config.js --only mongo-client-frontend-prod
 
 # Start specific service in development mode
 pm2 start ecosystem.config.js --only acsqd-backend --env development

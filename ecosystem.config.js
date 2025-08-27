@@ -51,6 +51,23 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     {
+      name: 'acsqd-frontend-prod',
+      cwd: './frontend',
+      script: 'sh',
+      args: '-c "npm run build && npx serve -s build -l 3000"',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        REACT_APP_API_URL: 'http://10.42.68.175:3008'
+      },
+      watch: false,
+      log_file: './logs/frontend-prod.log',
+      out_file: './logs/frontend-prod-out.log',
+      error_file: './logs/frontend-prod-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
       name: 'acsqd-ollama',
       cwd: '.',
       script: 'ollama',
@@ -140,6 +157,24 @@ module.exports = {
       log_file: './logs/mongo-client-frontend.log',
       out_file: './logs/mongo-client-frontend-out.log',
       error_file: './logs/mongo-client-frontend-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'mongo-client-frontend-prod',
+      cwd: './mongo-client/client',
+      script: 'sh',
+      args: '-c "npm run build && npx serve -s build -l 3010"',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3010,
+        REACT_APP_API_URL: 'http://10.42.68.175:5001/api'
+      },
+      watch: false,
+      log_file: './logs/mongo-client-frontend-prod.log',
+      out_file: './logs/mongo-client-frontend-prod-out.log',
+      error_file: './logs/mongo-client-frontend-prod-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
