@@ -128,12 +128,12 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 3010,
-        REACT_APP_API_URL: 'http://localhost:5001'
+        REACT_APP_API_URL: 'http://localhost:5001/api'
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3010,
-        REACT_APP_API_URL: 'http://10.42.68.175:5001'
+        REACT_APP_API_URL: 'http://10.42.68.175:5001/api'
       },
       watch: ['src'],
       ignore_watch: ['node_modules', 'build'],
