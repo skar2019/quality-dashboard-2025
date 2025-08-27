@@ -54,7 +54,8 @@
   "devDependencies": {
     "@craco/craco": "^7.1.0",
     "@types/multer": "^1.4.13",
-    "@types/node": "^22.15.29"
+    "@types/node": "^22.15.29",
+    "serve": "^14.2.4"
   },
   "proxy": "http://localhost:3008"
 }
