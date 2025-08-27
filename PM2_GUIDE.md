@@ -1,6 +1,6 @@
 # PM2 Guide for ACSQD Project
 
-This guide explains how to use PM2 (Process Manager 2) to manage the backend and frontend services for the ACSQD (Advanced Code Quality and Software Development) project.
+This guide explains how to use PM2 (Process Manager 2) to manage all services for the ACSQD (Advanced Code Quality and Software Development) project.
 
 ## 📋 Prerequisites
 
@@ -34,13 +34,21 @@ cd ../ml_models
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# Mongo Client Server dependencies
+cd ../mongo-client/server
+npm install
+
+# Mongo Client Frontend dependencies
+cd ../client
+npm install
 ```
 
 ## ⚙️ PM2 Configuration
 
-### Create Ecosystem Configuration
+### Current Ecosystem Configuration
 
-Create `ecosystem.config.js` in the root directory:
+The project uses `ecosystem.config.js` with 6 services:
 
 ```javascript
 module.exports = {
@@ -55,16 +63,16 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 3008,
-        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
-        JWT_SECRET: 'your_jwt_secret_here',
-        ML_API_URL: 'http://localhost:8000'
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
+        ML_API_URL: 'http://localhost:8000',
+        CORS_ORIGIN: 'http://localhost:3000'
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3008,
-        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
-        JWT_SECRET: 'your_jwt_secret_here',
-        ML_API_URL: 'http://localhost:8000'
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
+        ML_API_URL: 'http://10.42.68.175:8000',
+        CORS_ORIGIN: 'http://10.42.68.175:3000'
       },
       watch: ['src'],
       ignore_watch: ['node_modules', 'logs'],
@@ -86,7 +94,7 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: 'production',
-        REACT_APP_API_URL: 'http://localhost:3008'
+        REACT_APP_API_URL: 'http://10.42.68.175:3008'
       },
       watch: ['src'],
       ignore_watch: ['node_modules', 'build'],
@@ -96,21 +104,41 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     {
-      name: 'acsqd-ml-models',
-      cwd: './ml_models',
-      script: 'main.py',
-      interpreter: './venv/bin/python',
+      name: 'acsqd-ollama',
+      cwd: '.',
+      script: 'ollama',
+      args: 'serve',
       instances: 1,
       exec_mode: 'fork',
       env: {
+        OLLAMA_HOST: '0.0.0.0:11434'
+      },
+      env_production: {
+        OLLAMA_HOST: '0.0.0.0:11434'
+      },
+      watch: false,
+      log_file: './logs/ollama.log',
+      out_file: './logs/ollama-out.log',
+      error_file: './logs/ollama-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'acsqd-ml-models',
+      cwd: './ml_models',
+      script: 'sh',
+      args: '-c "source venv/bin/activate && python main.py"',
+      instances: 1,
+      exec_mode: 'fork',
+      depends_on: ['acsqd-ollama'],
+      env: {
         PYTHONPATH: './ml_models',
-        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
         OLLAMA_HOST: 'http://localhost:11434'
       },
       env_production: {
         PYTHONPATH: './ml_models',
-        MONGO_URL: 'mongodb://localhost:27017/quality_dashboard',
-        OLLAMA_HOST: 'http://localhost:11434'
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
+        OLLAMA_HOST: 'http://10.42.68.175:11434'
       },
       watch: ['*.py'],
       ignore_watch: ['venv', '__pycache__'],
@@ -118,12 +146,71 @@ module.exports = {
       out_file: './logs/out.log',
       error_file: './logs/error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'mongo-client-server',
+      cwd: './mongo-client/server',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 5001,
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 5001,
+        MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0'
+      },
+      watch: ['*.js'],
+      ignore_watch: ['node_modules', 'logs'],
+      log_file: './logs/mongo-client-server.log',
+      out_file: './logs/mongo-client-server-out.log',
+      error_file: './logs/mongo-client-server-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'mongo-client-frontend',
+      cwd: './mongo-client/client',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3010,
+        REACT_APP_API_URL: 'http://localhost:5001'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3010,
+        REACT_APP_API_URL: 'http://10.42.68.175:5001'
+      },
+      watch: ['src'],
+      ignore_watch: ['node_modules', 'build'],
+      log_file: './logs/mongo-client-frontend.log',
+      out_file: './logs/mongo-client-frontend-out.log',
+      error_file: './logs/mongo-client-frontend-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
 };
 ```
 
-## 🎯 Basic PM2 Commands
+## 🎯 Service Overview
+
+| Service | Port | Description | Dependencies |
+|---------|------|-------------|--------------|
+| `acsqd-backend` | 3008 | Main backend API | MongoDB |
+| `acsqd-frontend` | 3000 | Main React frontend | Backend API |
+| `acsqd-ollama` | 11434 | Ollama LLM service | None |
+| `acsqd-ml-models` | 8000 | Python ML models API | Ollama, MongoDB |
+| `mongo-client-server` | 5001 | MongoDB client backend | MongoDB |
+| `mongo-client-frontend` | 3010 | MongoDB client frontend | Mongo client server |
+
+## 🚀 Basic PM2 Commands
 
 ### Start Services
 
@@ -142,12 +229,16 @@ pm2 start ecosystem.config.js --only acsqd-backend --env development
 pm2 start ecosystem.config.js --only acsqd-frontend --env development
 pm2 start ecosystem.config.js --only acsqd-ollama --env development
 pm2 start ecosystem.config.js --only acsqd-ml-models --env development
+pm2 start ecosystem.config.js --only mongo-client-server --env development
+pm2 start ecosystem.config.js --only mongo-client-frontend --env development
 
 # Start specific service in production mode
 pm2 start ecosystem.config.js --only acsqd-backend --env production
 pm2 start ecosystem.config.js --only acsqd-frontend --env production
 pm2 start ecosystem.config.js --only acsqd-ollama --env production
 pm2 start ecosystem.config.js --only acsqd-ml-models --env production
+pm2 start ecosystem.config.js --only mongo-client-server --env production
+pm2 start ecosystem.config.js --only mongo-client-frontend --env production
 
 # Start Ollama service (required for ML models)
 pm2 start ecosystem.config.js --only acsqd-ollama
@@ -173,6 +264,8 @@ pm2 logs acsqd-backend
 pm2 logs acsqd-frontend
 pm2 logs acsqd-ml-models
 pm2 logs acsqd-ollama
+pm2 logs mongo-client-server
+pm2 logs mongo-client-frontend
 
 # View logs with timestamps
 pm2 logs --timestamp
@@ -189,6 +282,8 @@ pm2 stop acsqd-backend
 pm2 stop acsqd-frontend
 pm2 stop acsqd-ml-models
 pm2 stop acsqd-ollama
+pm2 stop mongo-client-server
+pm2 stop mongo-client-frontend
 
 # Restart all services
 pm2 restart all
@@ -198,6 +293,8 @@ pm2 restart acsqd-backend
 pm2 restart acsqd-frontend
 pm2 restart acsqd-ml-models
 pm2 restart acsqd-ollama
+pm2 restart mongo-client-server
+pm2 restart mongo-client-frontend
 
 # Delete all services
 pm2 delete all
@@ -207,6 +304,8 @@ pm2 delete acsqd-backend
 pm2 delete acsqd-frontend
 pm2 delete acsqd-ollama
 pm2 delete acsqd-ml-models
+pm2 delete mongo-client-server
+pm2 delete mongo-client-frontend
 ```
 
 ### Reload and Scale
@@ -226,27 +325,12 @@ pm2 scale acsqd-backend 3
 
 ### Environment Variables
 
-Create `.env` files in each service directory:
+The ecosystem configuration includes all necessary environment variables for both development and production environments. Key variables include:
 
-**Backend (.env)**
-```env
-NODE_ENV=development
-PORT=3008
-MONGO_URL=mongodb://localhost:27017/quality_dashboard
-JWT_SECRET=your_jwt_secret_here
-ML_API_URL=http://localhost:8000
-```
-
-**Frontend (.env)**
-```env
-REACT_APP_API_URL=http://localhost:3008
-```
-
-**ML Models (.env)**
-```env
-MONGO_URL=mongodb://localhost:27017/quality_dashboard
-OLLAMA_HOST=http://localhost:11434
-```
+- **MongoDB Connection**: Uses MongoDB Atlas cluster
+- **API URLs**: Configured for local development and production IPs
+- **CORS Origins**: Properly configured for frontend-backend communication
+- **Ollama Host**: Configured for local and production environments
 
 ### Production Setup
 
@@ -255,9 +339,9 @@ OLLAMA_HOST=http://localhost:11434
 cd frontend
 npm run build
 
-# Update ecosystem config for production
-# Change script from 'npm run dev' to 'npm start' for backend
-# Change script from 'npm start' to 'serve -s build -l 3000' for frontend
+# Build mongo-client frontend for production
+cd ../mongo-client/client
+npm run build
 
 # Start in production mode
 pm2 start ecosystem.config.js --env production
@@ -319,11 +403,8 @@ if ! command -v pm2 &> /dev/null; then
     npm install -g pm2
 fi
 
-# Check if MongoDB is running
-if ! pgrep -x "mongod" > /dev/null; then
-    echo "⚠️  MongoDB is not running. Please start MongoDB first."
-    exit 1
-fi
+# Check if MongoDB is running (optional for Atlas)
+echo "📊 Using MongoDB Atlas - no local MongoDB required"
 
 # Check if Ollama is running
 if ! pgrep -x "ollama" > /dev/null; then
@@ -341,9 +422,12 @@ pm2 save
 
 echo "✅ All services started!"
 echo ""
-echo "📱 Frontend: http://localhost:3000"
-echo "🔧 Backend: http://localhost:3008"
+echo "📱 Main Frontend: http://localhost:3000"
+echo "🔧 Main Backend: http://localhost:3008"
 echo "🤖 ML Models: http://localhost:8000"
+echo "🦙 Ollama: http://localhost:11434"
+echo "📊 Mongo Client Frontend: http://localhost:3010"
+echo "🔌 Mongo Client Backend: http://localhost:5001"
 echo ""
 echo "💡 Useful commands:"
 echo "   pm2 list          - View all processes"
@@ -410,6 +494,9 @@ chmod +x pm2-stop.sh
    lsof -i :3008
    lsof -i :3000
    lsof -i :8000
+   lsof -i :5001
+   lsof -i :3010
+   lsof -i :11434
    
    # Kill the process
    kill -9 <PID>
@@ -445,6 +532,16 @@ chmod +x pm2-stop.sh
    pm2 restart all
    ```
 
+5. **ML Models Service Issues**
+   ```bash
+   # Check if virtual environment is activated
+   pm2 logs acsqd-ml-models
+   
+   # Ensure Ollama is running first
+   pm2 restart acsqd-ollama
+   pm2 restart acsqd-ml-models
+   ```
+
 ### Useful Commands
 
 ```bash
@@ -467,12 +564,37 @@ pm2 install pm2-server-monit
 
 ## 📝 Summary
 
-This guide provides comprehensive instructions for using PM2 to manage the ACSQD project services. The key benefits of using PM2 include:
+This guide provides comprehensive instructions for using PM2 to manage all 6 ACSQD project services. The key benefits of using PM2 include:
 
 - **Process Management**: Automatic restart on crashes
 - **Load Balancing**: Multiple instances for better performance
 - **Monitoring**: Real-time monitoring and logging
 - **Zero Downtime**: Reload without stopping services
 - **Startup Scripts**: Automatic startup on system boot
+- **Service Dependencies**: Proper startup order (Ollama before ML models)
+
+### Service Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │ Mongo Client    │    │   Ollama        │
+│   (Port 3000)   │    │ Frontend        │    │   (Port 11434)  │
+│                 │    │ (Port 3010)     │    │                 │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          ▼                      ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Backend       │    │ Mongo Client    │    │   ML Models     │
+│   (Port 3008)   │    │ Backend         │    │   (Port 8000)   │
+│                 │    │ (Port 5001)     │    │                 │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 ▼
+                    ┌─────────────────────────┐
+                    │     MongoDB Atlas       │
+                    │   (Cloud Database)      │
+                    └─────────────────────────┘
+```
 
 For more information, visit the [PM2 documentation](https://pm2.keymetrics.io/docs/).
