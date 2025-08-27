@@ -19,7 +19,9 @@ module.exports = {
         PORT: 3008,
         MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
         ML_API_URL: 'http://10.42.68.175:8000',
-        CORS_ORIGIN: 'http://10.42.68.175:3000'
+        CORS_ORIGIN: 'http://10.42.68.175:3000',
+        SESSION_SECRET: 'your-production-session-secret-key-change-this',
+        USE_HTTPS: 'false'
       },
       watch: ['src'],
       ignore_watch: ['node_modules', 'logs'],

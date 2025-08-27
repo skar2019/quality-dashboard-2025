@@ -25,7 +25,9 @@ app.use(helmet()); // Adds various HTTP headers for security
 // CORS configuration
 app.use(cors({
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Rate limiting
@@ -66,7 +68,7 @@ app.use(session({
     saveUninitialized: true,
     store: sessionStore,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true',
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         sameSite: 'lax'
