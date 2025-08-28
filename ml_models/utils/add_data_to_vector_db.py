@@ -150,11 +150,39 @@ class VectorDBAdder:
             
             # Setup vectorstore using LangChain Chroma (same as SimpleRAGChat)
             # Create new vectorstore instance with fresh ChromaDB
-            self.vectorstore = Chroma(
-                persist_directory=self.chroma_db_path, 
-                embedding_function=self.embeddings, 
-                collection_name=self.collection_name
-            )
+            # Use a different approach to avoid instance conflicts
+            try:
+                self.vectorstore = Chroma(
+                    persist_directory=self.chroma_db_path, 
+                    embedding_function=self.embeddings, 
+                    collection_name=self.collection_name
+                )
+                logger.info("✅ Vectorstore created successfully")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to create vectorstore with standard approach: {e}")
+                # Try alternative approach
+                logger.info("🔄 Trying alternative vectorstore creation approach...")
+                
+                # Create ChromaDB client first
+                chroma_client = chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True,
+                        is_persistent=True
+                    )
+                )
+                
+                # Create collection
+                collection = chroma_client.create_collection(name=self.collection_name)
+                
+                # Create vectorstore with existing client
+                self.vectorstore = Chroma(
+                    client=chroma_client,
+                    collection_name=self.collection_name,
+                    embedding_function=self.embeddings
+                )
+                logger.info("✅ Vectorstore created with alternative approach")
             
             logger.info("Embedding model and vectorstore loaded successfully")
         except Exception as e:
