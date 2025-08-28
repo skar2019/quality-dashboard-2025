@@ -109,11 +109,35 @@ class VectorDBAdder:
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
             
-            # ChromaDB connection - use in-memory client to avoid readonly database issues
+            # ChromaDB connection - create persistent directory on server
             logger.info("Connecting to ChromaDB...")
             
-            # Use in-memory ChromaDB client to avoid readonly database issues
+            # Ensure the jira_tasks_chroma_db directory exists with proper permissions
             try:
+                if not os.path.exists(self.chroma_db_path):
+                    os.makedirs(self.chroma_db_path, mode=0o755)
+                    logger.info(f"✅ Created ChromaDB directory: {self.chroma_db_path}")
+                else:
+                    # Ensure directory has proper permissions
+                    os.chmod(self.chroma_db_path, 0o755)
+                    logger.info(f"✅ Ensured ChromaDB directory permissions: {self.chroma_db_path}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not create/fix directory: {e}")
+            
+            # Create persistent ChromaDB client
+            try:
+                self.chroma_client = chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
+                )
+                logger.info("✅ Created persistent ChromaDB client")
+            except Exception as e:
+                logger.warning(f"⚠️ Persistent client failed: {e}")
+                # Fallback to in-memory client
+                logger.info("🔄 Falling back to in-memory ChromaDB client...")
                 self.chroma_client = chromadb.Client(
                     settings=Settings(
                         anonymized_telemetry=False,
@@ -122,9 +146,6 @@ class VectorDBAdder:
                     )
                 )
                 logger.info("✅ Created in-memory ChromaDB client")
-            except Exception as e:
-                logger.error(f"❌ Failed to create ChromaDB client: {e}")
-                raise
             
             # Get or create collection
             try:
@@ -149,15 +170,25 @@ class VectorDBAdder:
                 model="nomic-embed-text"
             )
             
-            # Setup vectorstore using LangChain Chroma with in-memory client
-            # Create new vectorstore instance with in-memory ChromaDB
+            # Setup vectorstore using LangChain Chroma
+            # Create new vectorstore instance with the ChromaDB client
             try:
-                self.vectorstore = Chroma(
-                    client=self.chroma_client,
-                    collection_name=self.collection_name,
-                    embedding_function=self.embeddings
-                )
-                logger.info("✅ Vectorstore created successfully with in-memory client")
+                if hasattr(self.chroma_client, 'persist_directory'):
+                    # Persistent client
+                    self.vectorstore = Chroma(
+                        client=self.chroma_client,
+                        collection_name=self.collection_name,
+                        embedding_function=self.embeddings
+                    )
+                    logger.info("✅ Vectorstore created successfully with persistent client")
+                else:
+                    # In-memory client
+                    self.vectorstore = Chroma(
+                        client=self.chroma_client,
+                        collection_name=self.collection_name,
+                        embedding_function=self.embeddings
+                    )
+                    logger.info("✅ Vectorstore created successfully with in-memory client")
             except Exception as e:
                 logger.warning(f"⚠️ Failed to create vectorstore with client: {e}")
                 # Fallback: create vectorstore without client
