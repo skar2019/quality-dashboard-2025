@@ -19,8 +19,19 @@ import chromadb
 from chromadb.config import Settings
 
 # Import LangChain components for consistency with chatbot.py
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
+# Updated imports to use new packages and avoid deprecation warnings
+try:
+    from langchain_ollama import OllamaEmbeddings
+except ImportError:
+    # Fallback to old import if new package not available
+    from langchain_community.embeddings import OllamaEmbeddings
+
+try:
+    from langchain_chroma import Chroma
+except ImportError:
+    # Fallback to old import if new package not available
+    from langchain_community.vectorstores import Chroma
+
 from langchain.docstore.document import Document
 
 # Setup logging
@@ -58,6 +69,25 @@ class VectorDBAdder:
             
             # ChromaDB connection - using the same setup as SimpleRAGChat
             logger.info("Connecting to ChromaDB...")
+            
+            # Check if ChromaDB instance already exists and close it
+            try:
+                import chromadb
+                # Try to get existing client and close it
+                existing_client = chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
+                )
+                # Close the existing client
+                existing_client.reset()
+                logger.info("Reset existing ChromaDB instance")
+            except Exception as e:
+                logger.info(f"No existing ChromaDB instance to reset: {e}")
+            
+            # Create new ChromaDB client
             self.chroma_client = chromadb.PersistentClient(
                 path=self.chroma_db_path,
                 settings=Settings(
@@ -89,6 +119,22 @@ class VectorDBAdder:
             )
             
             # Setup vectorstore using LangChain Chroma (same as SimpleRAGChat)
+            # Clear any existing ChromaDB instances first
+            try:
+                import chromadb
+                # Reset ChromaDB to avoid conflicts
+                chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
+                ).reset()
+                logger.info("Reset ChromaDB to avoid instance conflicts")
+            except Exception as e:
+                logger.info(f"ChromaDB reset not needed: {e}")
+            
+            # Create new vectorstore instance
             self.vectorstore = Chroma(
                 persist_directory=self.chroma_db_path, 
                 embedding_function=self.embeddings, 
@@ -137,8 +183,19 @@ class VectorDBAdder:
             
             # Clear existing data in ChromaDB
             try:
-                self.chroma_client.delete_collection(self.collection_name)
+                # Reset ChromaDB completely to avoid conflicts
+                import chromadb
+                chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
+                ).reset()
+                
+                # Recreate the collection
                 self.collection = self.chroma_client.create_collection(name=self.collection_name)
+                
                 # Recreate vectorstore after clearing
                 self.vectorstore = Chroma(
                     persist_directory=self.chroma_db_path, 

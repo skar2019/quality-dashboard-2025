@@ -12,9 +12,25 @@ from difflib import get_close_matches
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import LangChain components for RAG functionality (exactly as in run_rag_query.py)
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.llms import Ollama
+# Updated imports to use new packages and avoid deprecation warnings
+try:
+    from langchain_ollama import OllamaEmbeddings
+except ImportError:
+    # Fallback to old import if new package not available
+    from langchain_community.embeddings import OllamaEmbeddings
+
+try:
+    from langchain_chroma import Chroma
+except ImportError:
+    # Fallback to old import if new package not available
+    from langchain_community.vectorstores import Chroma
+
+try:
+    from langchain_ollama import Ollama
+except ImportError:
+    # Fallback to old import if new package not available
+    from langchain_community.llms import Ollama
+
 from langchain.docstore.document import Document
 
 # Import the optimized chatbot service

@@ -1,21 +1,39 @@
+# Core FastAPI dependencies
 fastapi
 uvicorn
 pydantic
 python-dotenv
+
+# LangChain ecosystem - updated to latest packages
 langchain
 langchain-community
 langchain-core
+langchain-ollama
+langchain-chroma
+
+# Vector database
 chromadb
+
+# Embedding and ML models
 sentence-transformers
 ollama
+
+# Database
 pymongo
+
+# Data processing
 pandas
 numpy
+
+# Web and file handling
 python-multipart
 aiofiles
 httpx
 requests
+
+# Machine learning
 scikit-learn
+
 # Performance optimization dependencies
 psutil>=5.9.0
 torch>=2.0.0
