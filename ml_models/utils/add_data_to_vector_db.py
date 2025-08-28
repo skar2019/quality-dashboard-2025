@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 from datetime import datetime
+import shutil
 
 # Add the parent directory to Python path to access app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -57,6 +58,45 @@ class VectorDBAdder:
         self.setup_connections()
         self.setup_models()
     
+    def clear_chromadb_completely(self):
+        """Completely clear ChromaDB instance and data"""
+        try:
+            logger.info("🧹 Clearing ChromaDB completely...")
+            
+            # Method 1: Try to reset existing client
+            try:
+                existing_client = chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
+                )
+                existing_client.reset()
+                logger.info("✅ Reset existing ChromaDB client")
+            except Exception as e:
+                logger.info(f"ℹ️ No existing client to reset: {e}")
+            
+            # Method 2: Delete the entire ChromaDB directory
+            if os.path.exists(self.chroma_db_path):
+                try:
+                    shutil.rmtree(self.chroma_db_path)
+                    logger.info(f"🗑️ Deleted ChromaDB directory: {self.chroma_db_path}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not delete ChromaDB directory: {e}")
+            
+            # Method 3: Force garbage collection to clear any remaining references
+            import gc
+            gc.collect()
+            logger.info("🧹 Garbage collection completed")
+            
+            # Method 4: Wait a moment for any pending operations
+            import time
+            time.sleep(1)
+            
+        except Exception as e:
+            logger.error(f"❌ Error clearing ChromaDB: {e}")
+    
     def setup_connections(self):
         """Setup MongoDB and ChromaDB connections"""
         try:
@@ -67,25 +107,11 @@ class VectorDBAdder:
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
             
-            # ChromaDB connection - using the same setup as SimpleRAGChat
+            # ChromaDB connection - completely clear and recreate
             logger.info("Connecting to ChromaDB...")
             
-            # Check if ChromaDB instance already exists and close it
-            try:
-                import chromadb
-                # Try to get existing client and close it
-                existing_client = chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True
-                    )
-                )
-                # Close the existing client
-                existing_client.reset()
-                logger.info("Reset existing ChromaDB instance")
-            except Exception as e:
-                logger.info(f"No existing ChromaDB instance to reset: {e}")
+            # Clear ChromaDB completely before creating new instance
+            self.clear_chromadb_completely()
             
             # Create new ChromaDB client
             self.chroma_client = chromadb.PersistentClient(
@@ -113,28 +139,17 @@ class VectorDBAdder:
         """Setup embedding model - using the same as SimpleRAGChat"""
         try:
             logger.info("Setting up embedding model...")
+            
+            # Clear ChromaDB again before creating vectorstore
+            self.clear_chromadb_completely()
+            
             # Use the same embedding model as SimpleRAGChat
             self.embeddings = OllamaEmbeddings(
                 model="nomic-embed-text"
             )
             
             # Setup vectorstore using LangChain Chroma (same as SimpleRAGChat)
-            # Clear any existing ChromaDB instances first
-            try:
-                import chromadb
-                # Reset ChromaDB to avoid conflicts
-                chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True
-                    )
-                ).reset()
-                logger.info("Reset ChromaDB to avoid instance conflicts")
-            except Exception as e:
-                logger.info(f"ChromaDB reset not needed: {e}")
-            
-            # Create new vectorstore instance
+            # Create new vectorstore instance with fresh ChromaDB
             self.vectorstore = Chroma(
                 persist_directory=self.chroma_db_path, 
                 embedding_function=self.embeddings, 
@@ -181,30 +196,21 @@ class VectorDBAdder:
             documents = list(self.mongo_collection.find({}, {'_id': 0}))
             logger.info(f"Retrieved {len(documents)} documents from MongoDB")
             
-            # Clear existing data in ChromaDB
+            # Clear existing data in ChromaDB completely
+            logger.info("🧹 Clearing existing ChromaDB data...")
+            self.clear_chromadb_completely()
+            
+            # Recreate the collection and vectorstore
             try:
-                # Reset ChromaDB completely to avoid conflicts
-                import chromadb
-                chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True
-                    )
-                ).reset()
-                
-                # Recreate the collection
                 self.collection = self.chroma_client.create_collection(name=self.collection_name)
-                
-                # Recreate vectorstore after clearing
                 self.vectorstore = Chroma(
                     persist_directory=self.chroma_db_path, 
                     embedding_function=self.embeddings, 
                     collection_name=self.collection_name
                 )
-                logger.info("Cleared existing ChromaDB collection")
+                logger.info("✅ Recreated ChromaDB collection and vectorstore")
             except Exception as e:
-                logger.warning(f"Could not clear existing collection: {e}")
+                logger.warning(f"Could not recreate collection: {e}")
             
             # Process documents using the same format as chatbot.py
             langchain_documents = []
