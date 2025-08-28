@@ -147,14 +147,28 @@ class VectorDBAdder:
                 )
                 logger.info("✅ Created in-memory ChromaDB client")
             
-            # Get or create collection
+            # Clear any existing collections and create fresh one
             try:
-                self.collection = self.chroma_client.get_collection(name=self.collection_name)
-                logger.info("ChromaDB collection retrieved successfully")
-            except Exception:
-                logger.info("Creating new ChromaDB collection...")
+                # List existing collections
+                collections = self.chroma_client.list_collections()
+                logger.info(f"Found {len(collections)} existing collections")
+                
+                # Delete existing collection if it exists
+                for collection in collections:
+                    if collection.name == self.collection_name:
+                        self.chroma_client.delete_collection(name=self.collection_name)
+                        logger.info(f"✅ Deleted existing collection: {self.collection_name}")
+                        break
+            except Exception as e:
+                logger.info(f"ℹ️ No existing collections to clear: {e}")
+            
+            # Create new collection
+            try:
                 self.collection = self.chroma_client.create_collection(name=self.collection_name)
-                logger.info("ChromaDB collection created successfully")
+                logger.info(f"✅ Created new ChromaDB collection: {self.collection_name}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create collection: {e}")
+                raise
             
         except Exception as e:
             logger.error(f"Error setting up connections: {str(e)}")
@@ -171,24 +185,15 @@ class VectorDBAdder:
             )
             
             # Setup vectorstore using LangChain Chroma
-            # Create new vectorstore instance with the ChromaDB client
+            # Create new vectorstore instance with the ChromaDB client and collection
             try:
-                if hasattr(self.chroma_client, 'persist_directory'):
-                    # Persistent client
-                    self.vectorstore = Chroma(
-                        client=self.chroma_client,
-                        collection_name=self.collection_name,
-                        embedding_function=self.embeddings
-                    )
-                    logger.info("✅ Vectorstore created successfully with persistent client")
-                else:
-                    # In-memory client
-                    self.vectorstore = Chroma(
-                        client=self.chroma_client,
-                        collection_name=self.collection_name,
-                        embedding_function=self.embeddings
-                    )
-                    logger.info("✅ Vectorstore created successfully with in-memory client")
+                # Create vectorstore with explicit collection
+                self.vectorstore = Chroma(
+                    client=self.chroma_client,
+                    collection_name=self.collection_name,
+                    embedding_function=self.embeddings
+                )
+                logger.info("✅ Vectorstore created successfully with ChromaDB client")
             except Exception as e:
                 logger.warning(f"⚠️ Failed to create vectorstore with client: {e}")
                 # Fallback: create vectorstore without client
@@ -242,21 +247,14 @@ class VectorDBAdder:
             documents = list(self.mongo_collection.find({}, {'_id': 0}))
             logger.info(f"Retrieved {len(documents)} documents from MongoDB")
             
-            # Clear existing data in ChromaDB completely
+            # Clear existing data in ChromaDB collection
             logger.info("🧹 Clearing existing ChromaDB data...")
-            self.clear_chromadb_completely()
-            
-            # Recreate the collection and vectorstore
             try:
-                self.collection = self.chroma_client.create_collection(name=self.collection_name)
-                self.vectorstore = Chroma(
-                    persist_directory=self.chroma_db_path, 
-                    embedding_function=self.embeddings, 
-                    collection_name=self.collection_name
-                )
-                logger.info("✅ Recreated ChromaDB collection and vectorstore")
+                # Clear the collection data
+                self.collection.delete(where={})
+                logger.info("✅ Cleared existing collection data")
             except Exception as e:
-                logger.warning(f"Could not recreate collection: {e}")
+                logger.warning(f"Could not clear collection data: {e}")
             
             # Process documents using the same format as chatbot.py
             langchain_documents = []
