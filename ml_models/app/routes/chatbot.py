@@ -113,7 +113,7 @@ class SimpleRAGChat:
     def __init__(self):
         # Use the same path as in add_data_to_vector_db.py for consistency
         # Using relative path for better portability
-        self.persist_directory = "./chroma_db_new"
+        self.persist_directory = "./jira_tasks_chroma_db"
         
         # Performance optimization: Check for GPU availability
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

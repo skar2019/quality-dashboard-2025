@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 class VectorDBAdder:
     def __init__(self):
         self.mongo_url = "mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0"
+        
+        # Use the jira_tasks_chroma_db directory as requested
         self.chroma_db_path = "./jira_tasks_chroma_db"
         self.collection_name = "project_data"
         
@@ -107,20 +109,73 @@ class VectorDBAdder:
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
             
-            # ChromaDB connection - completely clear and recreate
+            # ChromaDB connection - handle readonly database issue
             logger.info("Connecting to ChromaDB...")
             
             # Clear ChromaDB completely before creating new instance
             self.clear_chromadb_completely()
             
-            # Create new ChromaDB client
-            self.chroma_client = chromadb.PersistentClient(
-                path=self.chroma_db_path,
-                settings=Settings(
-                    anonymized_telemetry=False,
-                    allow_reset=True
+            # Try to create directory with proper permissions
+            try:
+                if not os.path.exists(self.chroma_db_path):
+                    os.makedirs(self.chroma_db_path, mode=0o755)
+                    logger.info(f"✅ Created ChromaDB directory: {self.chroma_db_path}")
+                else:
+                    # Try to fix permissions on existing directory
+                    try:
+                        os.chmod(self.chroma_db_path, 0o755)
+                        logger.info(f"✅ Fixed permissions on ChromaDB directory: {self.chroma_db_path}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not fix permissions: {e}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not create/fix directory: {e}")
+            
+            # Try different approaches to create ChromaDB client
+            chroma_client = None
+            
+            # Approach 1: Try standard client
+            try:
+                chroma_client = chromadb.PersistentClient(
+                    path=self.chroma_db_path,
+                    settings=Settings(
+                        anonymized_telemetry=False,
+                        allow_reset=True
+                    )
                 )
-            )
+                logger.info("✅ Created ChromaDB client with standard approach")
+            except Exception as e:
+                logger.warning(f"⚠️ Standard client failed: {e}")
+                
+                # Approach 2: Try with different settings
+                try:
+                    chroma_client = chromadb.PersistentClient(
+                        path=self.chroma_db_path,
+                        settings=Settings(
+                            anonymized_telemetry=False,
+                            allow_reset=True,
+                            is_persistent=True
+                        )
+                    )
+                    logger.info("✅ Created ChromaDB client with alternative settings")
+                except Exception as e2:
+                    logger.warning(f"⚠️ Alternative settings failed: {e2}")
+                    
+                    # Approach 3: Try in-memory client as fallback
+                    try:
+                        logger.info("🔄 Trying in-memory ChromaDB client as fallback...")
+                        chroma_client = chromadb.Client(
+                            settings=Settings(
+                                anonymized_telemetry=False,
+                                allow_reset=True,
+                                is_persistent=False
+                            )
+                        )
+                        logger.info("✅ Created in-memory ChromaDB client")
+                    except Exception as e3:
+                        logger.error(f"❌ All ChromaDB client approaches failed: {e3}")
+                        raise
+            
+            self.chroma_client = chroma_client
             
             # Get or create collection
             try:
