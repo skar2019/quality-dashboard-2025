@@ -268,6 +268,7 @@ pm2 logs
 # View logs for specific service
 pm2 logs acsqd-backend
 pm2 logs acsqd-frontend
+pm2 logs acsqd-frontend-prod ## For prod
 pm2 logs acsqd-ml-models
 pm2 logs acsqd-ollama
 pm2 logs mongo-client-server

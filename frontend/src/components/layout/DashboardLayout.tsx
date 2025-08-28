@@ -76,7 +76,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     // Fetch current user from session endpoint
     const fetchSessionUser = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/session`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/session`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -109,7 +109,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   const handleSignOut = async () => {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/logout`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/logout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'

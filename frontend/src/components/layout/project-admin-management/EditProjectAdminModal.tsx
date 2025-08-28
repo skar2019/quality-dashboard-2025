@@ -38,7 +38,7 @@ const EditProjectAdminModal: React.FC<Props> = ({ open, admin, onClose, onSucces
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const { adminPassword, ...rest } = form;
       const payload = { ...rest, password: adminPassword };
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/project-admins/${admin.id}`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/project-admins/${admin.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

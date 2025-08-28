@@ -43,7 +43,7 @@ const AddProjectAdminModal: React.FC<Props> = ({ open, onClose, onSuccess }) => 
         currentUserRole: currentUser.role
       };
       console.log('📝 Sending payload:', payload);
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/project-admins`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/project-admins`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

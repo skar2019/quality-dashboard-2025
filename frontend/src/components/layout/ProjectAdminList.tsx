@@ -25,7 +25,7 @@ const ProjectAdminList: React.FC = () => {
     // Fetch current user from session endpoint
     const fetchSessionUser = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/session`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/session`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -45,7 +45,7 @@ const ProjectAdminList: React.FC = () => {
 
   const fetchProjectAdmins = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/project-admins`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/project-admins`, {
         credentials: 'include'
       });
 

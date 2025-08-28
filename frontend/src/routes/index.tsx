@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC = () => {
   });
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/user/session`, {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/session`, {
       credentials: 'include'
     })
       .then(res => res.json())

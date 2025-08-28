@@ -42,11 +42,11 @@ const Login: React.FC = () => {
             // Debug logging
             console.log('🔍 Login Debug Info:');
             console.log('Environment API URL:', process.env.REACT_APP_API_URL);
-            console.log('Full Login URL:', `${process.env.REACT_APP_API_URL}/api/user/login`);
+            console.log('Full Login URL:', `${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/login`);
             console.log('Login credentials:', { email: formData.email, password: '***' });
             
             try {
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/login`, {
+                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: formData.email, password: formData.password }),

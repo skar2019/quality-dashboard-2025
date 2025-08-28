@@ -26,7 +26,7 @@ const DeleteConfirmationModal: React.FC<Props> = ({ open, admin, onClose, onSucc
     setError('');
     try {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/project-admins/${admin.id}`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/user/project-admins/${admin.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

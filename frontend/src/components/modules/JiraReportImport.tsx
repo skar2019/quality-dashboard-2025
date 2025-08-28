@@ -123,7 +123,7 @@ const JiraReportImport: React.FC = () => {
     const fetchProjects = async () => {
       setLoadingProjects(true);
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/projects`, {
           credentials: 'include',
         });
         if (response.ok) {

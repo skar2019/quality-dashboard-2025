@@ -136,7 +136,7 @@ const DefectDensityQuality: React.FC<DefectDensityQualityProps> = ({
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
-      const response = await fetch(`/api/jira-imports/project/${encodeURIComponent(projectToAnalyze)}/quality-metrics?${params.toString()}`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports/project/${encodeURIComponent(projectToAnalyze)}/quality-metrics?${params.toString()}`, {
         credentials: 'include'
       });
 

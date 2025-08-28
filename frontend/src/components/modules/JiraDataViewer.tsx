@@ -149,7 +149,7 @@ const JiraDataViewer: React.FC = () => {
         ...(filters.endDate && { endDate: filters.endDate }),
       });
 
-      const response = await fetch(`/api/jira-imports/${selectedReport._id}/data?${params}`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports/${selectedReport._id}/data?${params}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -175,7 +175,7 @@ const JiraDataViewer: React.FC = () => {
         ...(filters.endDate && { endDate: filters.endDate }),
       });
 
-      const response = await fetch(`/api/jira-imports/${selectedReport._id}/stats?${params}`, {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports/${selectedReport._id}/stats?${params}`, {
         credentials: 'include'
       });
       const data = await response.json();
