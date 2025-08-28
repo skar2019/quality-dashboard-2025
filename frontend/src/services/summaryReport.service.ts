@@ -1,7 +1,7 @@
 import axios from 'axios';
 import chatbotService from './chatbot.service';
 
-const ML_SERVICE_URL = process.env.REACT_APP_ML_SERVICE_URL || 'http://localhost:8000';
+const ML_SERVICE_URL = process.env.REACT_APP_ML_API_URL || 'http://localhost:8000';
 
 export interface ProjectStatus {
   projectId: string;

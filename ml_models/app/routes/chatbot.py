@@ -32,9 +32,12 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-    logger.warning("⚠️ psutil not available, using basic performance monitoring")
 
 logger = logging.getLogger(__name__)
+
+# Log psutil availability after logger is defined
+if not HAS_PSUTIL:
+    logger.warning("⚠️ psutil not available, using basic performance monitoring")
 router = APIRouter(prefix="/api/chatbot", tags=["chatbot"])
 
 # Request/Response models

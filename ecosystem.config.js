@@ -39,11 +39,13 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'development',
-        REACT_APP_API_URL: 'http://localhost:3008'
+        REACT_APP_API_URL: 'http://localhost:3008',
+        REACT_APP_ML_API_URL: 'http://localhost:8000'
       },
       env_production: {
         NODE_ENV: 'production',
-        REACT_APP_API_URL: 'http://10.42.68.175:3008'
+        REACT_APP_API_URL: 'http://10.42.68.175:3008',
+        REACT_APP_ML_API_URL: 'http://10.42.68.175:8000'
       },
       watch: ['src'],
       ignore_watch: ['node_modules', 'build'],
@@ -61,7 +63,8 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        REACT_APP_API_URL: 'http://10.42.68.175:3008'
+        REACT_APP_API_URL: 'http://10.42.68.175:3008',
+        REACT_APP_ML_API_URL: 'http://10.42.68.175:8000'
       },
       watch: false,
       log_file: './logs/frontend-prod.log',
@@ -99,12 +102,16 @@ module.exports = {
       env: {
         PYTHONPATH: './ml_models',
         MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
-        OLLAMA_HOST: 'http://localhost:11434'
+        OLLAMA_HOST: 'http://localhost:11434',
+        HOST: '0.0.0.0',
+        PORT: '8000'
       },
       env_production: {
         PYTHONPATH: './ml_models',
         MONGO_URL: 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0',
-        OLLAMA_HOST: 'http://10.42.68.175:11434'
+        OLLAMA_HOST: 'http://10.42.68.175:11434',
+        HOST: '0.0.0.0',
+        PORT: '8000'
       },
       watch: ['*.py'],
       ignore_watch: ['venv', '__pycache__'],

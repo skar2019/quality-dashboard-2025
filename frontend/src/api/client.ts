@@ -8,7 +8,7 @@ export const API_CONFIG = {
   },
 } as const;
 
-export const ML_SERVICE_URL = process.env.REACT_APP_ML_SERVICE_URL || 'http://localhost:8000';
+export const ML_SERVICE_URL = process.env.REACT_APP_ML_API_URL || 'http://localhost:8000';
 
 const apiClient = axios.create(API_CONFIG);
 

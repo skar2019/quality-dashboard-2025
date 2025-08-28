@@ -251,6 +251,8 @@ pm2 start ecosystem.config.js --only acsqd-ollama
 
 # Start Ollama in production mode
 pm2 start ecosystem.config.js --only acsqd-ollama --env production
+
+pm2 start ecosystem.config.js --only acsqd-ollama --env development
 ```
 
 ### Monitor Services

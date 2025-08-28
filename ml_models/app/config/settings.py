@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Server settings
-    host: str = "0.0.0.0"
-    port: int = 8000
+    host: str = os.getenv("HOST", "0.0.0.0")
+    port: int = int(os.getenv("PORT", "8000"))
     
     # CORS settings - fully configurable via env (no hardcoded defaults)
     allowed_origins: str = ""
