@@ -55,7 +55,7 @@ module.exports = {
     {
       name: 'acsqd-frontend-prod',
       cwd: './frontend',
-      script: 'sh',
+      script: 'bash',
       args: '-c "npm run build && npx serve -s build -l 3000"',
       instances: 1,
       exec_mode: 'fork',
@@ -91,7 +91,7 @@ module.exports = {
     {
       name: 'acsqd-ml-models',
       cwd: './ml_models',
-      script: 'sh',
+      script: 'bash',
       args: '-c "source venv/bin/activate && python main.py"',
       instances: 1,
       exec_mode: 'fork',
@@ -164,7 +164,7 @@ module.exports = {
     {
       name: 'mongo-client-frontend-prod',
       cwd: './mongo-client/client',
-      script: 'sh',
+      script: 'bash',
       args: '-c "npm run build && npx serve -s build -l 3010"',
       instances: 1,
       exec_mode: 'fork',

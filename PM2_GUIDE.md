@@ -272,7 +272,8 @@ pm2 logs acsqd-frontend-prod ## For prod
 pm2 logs acsqd-ml-models
 pm2 logs acsqd-ollama
 pm2 logs mongo-client-server
-pm2 logs mongo-client-frontend
+pm2 logs mongo-client-frontend 
+pm2 logs mongo-client-frontend-prod
 
 # View logs with timestamps
 pm2 logs --timestamp
