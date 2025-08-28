@@ -181,7 +181,7 @@ const JiraReportImport: React.FC = () => {
 
   useEffect(() => {
     setLoadingRecent(true);
-    fetch('/api/jira-imports/recent', {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports/recent`, {
       credentials: 'include'
     })
       .then(res => res.json())
@@ -262,7 +262,7 @@ const JiraReportImport: React.FC = () => {
     formData.append('endDate', endDate);
 
     try {
-      const response = await fetch('/api/jira-imports', {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports`, {
         method: 'POST',
         credentials: 'include',
         body: formData,

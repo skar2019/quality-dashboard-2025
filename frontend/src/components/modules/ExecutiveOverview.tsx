@@ -459,7 +459,7 @@ const ExecutiveOverview: React.FC = () => {
       setError(null);
 
       // Use the correct endpoint for all projects
-      const response = await fetch('/api/projects', {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/projects`, {
         credentials: 'include'
       });
       if (!response.ok) {

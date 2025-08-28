@@ -227,7 +227,7 @@ pm2 start ecosystem.config.js --env development
 pm2 start ecosystem.config.js --env production
 
 # Start production frontend services (build + serve static files)
-pm2 start ecosystem.config.js --only acsqd-frontend-prod
+
 pm2 start ecosystem.config.js --only mongo-client-frontend-prod
 
 # Start specific service in development mode
@@ -240,11 +240,11 @@ pm2 start ecosystem.config.js --only mongo-client-frontend --env development
 
 # Start specific service in production mode
 pm2 start ecosystem.config.js --only acsqd-backend --env production
-pm2 start ecosystem.config.js --only acsqd-frontend --env production
+pm2 start ecosystem.config.js --only acsqd-frontend-prod --env production
 pm2 start ecosystem.config.js --only acsqd-ollama --env production
 pm2 start ecosystem.config.js --only acsqd-ml-models --env production
 pm2 start ecosystem.config.js --only mongo-client-server --env production
-pm2 start ecosystem.config.js --only mongo-client-frontend --env production
+pm2 start ecosystem.config.js --only mongo-client-frontend-prod --env production
 
 # Start Ollama service (required for ML models)
 pm2 start ecosystem.config.js --only acsqd-ollama

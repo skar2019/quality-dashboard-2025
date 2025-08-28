@@ -137,7 +137,7 @@ const SummaryReportChat = React.forwardRef<any, {}>((props, ref) => {
     const fetchProjects = async () => {
       try {
         setProjectsLoading(true);
-        const response = await fetch('/api/projects', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/projects`, {
           credentials: 'include'
         });
         

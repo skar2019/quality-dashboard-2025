@@ -124,7 +124,7 @@ const JiraDataViewer: React.FC = () => {
 
   const fetchReports = async () => {
     try {
-      const response = await fetch('/api/jira-imports/recent', {
+              const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3008'}/api/jira-imports/recent`, {
         credentials: 'include'
       });
       const data = await response.json();
