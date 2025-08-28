@@ -2,6 +2,7 @@
 """
 Script to add data to ChromaDB vector database
 Adds JIRA task data from MongoDB to ChromaDB for RAG operations
+Uses the same embedding system as SimpleRAGChat for consistency
 """
 
 import os
@@ -16,7 +17,11 @@ import pymongo
 from pymongo import MongoClient
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+
+# Import LangChain components for consistency with chatbot.py
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain.docstore.document import Document
 
 # Setup logging
 logging.basicConfig(
@@ -28,14 +33,15 @@ logger = logging.getLogger(__name__)
 class VectorDBAdder:
     def __init__(self):
         self.mongo_url = "mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0"
-        self.chroma_db_path = "/opt/homebrew/var/www/acsqd/ml_models/jira_tasks_chroma_db"
+        self.chroma_db_path = "./jira_tasks_chroma_db"
         self.collection_name = "project_data"
         
         # Initialize connections
         self.mongo_client = None
         self.chroma_client = None
         self.collection = None
-        self.embedding_model = None
+        self.embeddings = None
+        self.vectorstore = None
         
         self.setup_connections()
         self.setup_models()
@@ -50,7 +56,7 @@ class VectorDBAdder:
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
             
-            # ChromaDB connection
+            # ChromaDB connection - using the same setup as SimpleRAGChat
             logger.info("Connecting to ChromaDB...")
             self.chroma_client = chromadb.PersistentClient(
                 path=self.chroma_db_path,
@@ -74,26 +80,46 @@ class VectorDBAdder:
             raise
     
     def setup_models(self):
-        """Setup embedding model"""
+        """Setup embedding model - using the same as SimpleRAGChat"""
         try:
             logger.info("Setting up embedding model...")
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("Embedding model loaded successfully")
+            # Use the same embedding model as SimpleRAGChat
+            self.embeddings = OllamaEmbeddings(
+                model="nomic-embed-text"
+            )
+            
+            # Setup vectorstore using LangChain Chroma (same as SimpleRAGChat)
+            self.vectorstore = Chroma(
+                persist_directory=self.chroma_db_path, 
+                embedding_function=self.embeddings, 
+                collection_name=self.collection_name
+            )
+            
+            logger.info("Embedding model and vectorstore loaded successfully")
         except Exception as e:
             logger.error(f"Error setting up embedding model: {str(e)}")
             raise
     
-    def create_embedding(self, text: str):
-        """Create embedding for text"""
+    def clean_text(self, text: str) -> str:
+        """Clean and normalize text for better embedding - same as chatbot.py"""
+        if not text or not isinstance(text, str):
+            return ""
+        return text.strip().replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    
+    def format_date(self, date_str: str) -> str:
+        """Format date string for consistency - same as chatbot.py"""
+        if not date_str or date_str == 'Unknown':
+            return 'Unknown'
         try:
-            embedding = self.embedding_model.encode(text).tolist()
-            return embedding
-        except Exception as e:
-            logger.error(f"Error creating embedding: {str(e)}")
-            raise
+            # Try to parse and format the date
+            from datetime import datetime
+            parsed_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            return parsed_date.strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            return str(date_str)
     
     def add_data_to_vector_db(self):
-        """Add JIRA data from MongoDB to ChromaDB"""
+        """Add JIRA data from MongoDB to ChromaDB using the same format as chatbot.py"""
         try:
             logger.info("=== Adding Data to Vector Database ===")
             
@@ -113,63 +139,109 @@ class VectorDBAdder:
             try:
                 self.chroma_client.delete_collection(self.collection_name)
                 self.collection = self.chroma_client.create_collection(name=self.collection_name)
+                # Recreate vectorstore after clearing
+                self.vectorstore = Chroma(
+                    persist_directory=self.chroma_db_path, 
+                    embedding_function=self.embeddings, 
+                    collection_name=self.collection_name
+                )
                 logger.info("Cleared existing ChromaDB collection")
             except Exception as e:
                 logger.warning(f"Could not clear existing collection: {e}")
             
-            # Process documents in batches
-            batch_size = 50
-            total_added = 0
+            # Process documents using the same format as chatbot.py
+            langchain_documents = []
             
-            for i in range(0, len(documents), batch_size):
-                batch = documents[i:i + batch_size]
-                logger.info(f"Processing batch {i//batch_size + 1}/{(len(documents) + batch_size - 1)//batch_size}")
-                
-                texts = []
-                metadatas = []
-                ids = []
-                
-                for doc in batch:
-                    # Create text content
-                    text_content = f"""Task ID: {doc.get('taskId', 'N/A')}
-Title: {doc.get('summary', 'N/A')}
-Description: {doc.get('description', 'N/A')}
-Status: {doc.get('status', 'N/A')}
-Priority: {doc.get('priority', 'N/A')}
-Assignee: {doc.get('assignee', 'N/A')}
-Issue Type: {doc.get('issueType', 'N/A')}
-Project: {doc.get('project', 'N/A')}
-Sprint: {doc.get('sprint', 'N/A')}"""
+            for doc in documents:
+                try:
+                    # Extract and clean JIRA item data (same as chatbot.py)
+                    issue_key = self.clean_text(doc.get('taskId', 'Unknown'))
+                    summary = self.clean_text(doc.get('summary', 'No Summary'))
+                    description = self.clean_text(doc.get('description', 'No Description'))
+                    issue_type = self.clean_text(doc.get('issueType', 'Unknown'))
+                    status = self.clean_text(doc.get('status', 'Unknown'))
+                    priority = self.clean_text(doc.get('priority', 'Unknown'))
+                    assignee = self.clean_text(doc.get('assignee', 'Unknown'))
+                    reporter = self.clean_text(doc.get('reporter', 'Unknown'))
+                    created = self.format_date(doc.get('created', 'Unknown'))
+                    updated = self.format_date(doc.get('updated', 'Unknown'))
+                    resolution = self.clean_text(doc.get('resolution', 'Unresolved'))
+                    project_id = self.clean_text(doc.get('project', 'Unknown'))
+                    sprint_id = self.clean_text(doc.get('sprint', 'Unknown'))
                     
-                    # Create metadata
+                    # Skip items with no meaningful content
+                    if not summary and not description:
+                        logger.warning(f"Skipping item {issue_key} - no summary or description")
+                        continue
+                    
+                    # Create document content exactly as in chatbot.py
+                    content = f"Task ID: {issue_key}\nTitle: {summary}\nDescription: {description}\nStatus: {status}\nPriority: {priority}\nAssignee: {assignee}\nReporter: {reporter}\nIssue Type: {issue_type}\nResolution: {resolution}\nProject: {project_id}\nSprint: {sprint_id}"
+                    
+                    # Create metadata exactly as in chatbot.py
                     metadata = {
-                        "task_id": doc.get('taskId', 'N/A'),
-                        "project": doc.get('project', 'N/A'),
-                        "sprint": doc.get('sprint', 'N/A'),
-                        "status": doc.get('status', 'N/A'),
-                        "priority": doc.get('priority', 'N/A'),
-                        "assignee": doc.get('assignee', 'N/A'),
-                        "issue_type": doc.get('issueType', 'N/A')
+                        "task_id": issue_key,
+                        "status": status,
+                        "priority": priority,
+                        "assignee": assignee,
+                        "issue_type": issue_type,
+                        "project_id": project_id,
+                        "sprint_id": sprint_id
                     }
                     
-                    texts.append(text_content)
-                    metadatas.append(metadata)
-                    ids.append(f"doc_{total_added + len(texts)}")
-                
-                # Add batch to ChromaDB
-                try:
-                    self.collection.add(
-                        documents=texts,
-                        metadatas=metadatas,
-                        ids=ids
+                    # Create LangChain Document
+                    langchain_doc = Document(
+                        page_content=content,
+                        metadata=metadata
                     )
-                    total_added += len(texts)
-                    logger.info(f"Added {len(texts)} documents to ChromaDB")
+                    langchain_documents.append(langchain_doc)
+                    
                 except Exception as e:
-                    logger.error(f"Error adding batch to ChromaDB: {e}")
+                    logger.error(f"Error processing document {doc.get('taskId', 'Unknown')}: {e}")
                     continue
             
-            logger.info(f"✅ Successfully added {total_added} documents to ChromaDB")
+            # Add documents to vectorstore using batch processing (same as chatbot.py)
+            if langchain_documents:
+                logger.info(f"📚 Adding {len(langchain_documents)} documents to vector store...")
+                
+                # Use batch processing for better performance
+                batch_size = 50  # Same as chatbot.py
+                total_added = 0
+                failed_batches = 0
+                
+                for i in range(0, len(langchain_documents), batch_size):
+                    batch = langchain_documents[i:i + batch_size]
+                    batch_num = i // batch_size + 1
+                    total_batches = (len(langchain_documents) + batch_size - 1) // batch_size
+                    
+                    try:
+                        self.vectorstore.add_documents(batch)
+                        total_added += len(batch)
+                        logger.info(f"✅ Added batch {batch_num}/{total_batches}: {len(batch)} documents")
+                    except Exception as e:
+                        failed_batches += 1
+                        logger.error(f"❌ Failed to add batch {batch_num}/{total_batches}: {e}")
+                        
+                        # Try adding documents individually as fallback
+                        individual_success = 0
+                        for doc in batch:
+                            try:
+                                self.vectorstore.add_documents([doc])
+                                individual_success += 1
+                                total_added += 1
+                            except Exception as doc_error:
+                                logger.error(f"❌ Failed to add individual document: {doc_error}")
+                        
+                        if individual_success > 0:
+                            logger.info(f"🔄 Recovered {individual_success} documents from failed batch")
+                
+                if failed_batches == 0:
+                    logger.info(f"✅ Successfully added all {total_added} documents to vector store")
+                else:
+                    logger.warning(f"⚠️ Added {total_added} documents with {failed_batches} failed batches")
+            else:
+                logger.warning("⚠️ No valid documents to add to vector store")
+            
+            logger.info(f"✅ Successfully added {len(langchain_documents)} documents to ChromaDB")
             return True
             
         except Exception as e:

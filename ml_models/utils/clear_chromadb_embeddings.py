@@ -24,7 +24,7 @@ def clear_chromadb_embeddings():
         from chromadb.config import Settings
         
         # ChromaDB connection
-        chroma_path = "../jira_tasks_chroma_db"
+        chroma_path = "./jira_tasks_chroma_db"
         client = chromadb.PersistentClient(path=chroma_path)
         
         # Get all collections

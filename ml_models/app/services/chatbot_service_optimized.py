@@ -103,7 +103,7 @@ class OptimizedProjectInsiderChatbot:
         self.ollama_model = "llama2"
         
         # RAG-specific attributes
-        self.rag_chroma_path = "/opt/homebrew/var/www/acsqd/ml_models/jira_tasks_chroma_db"
+        self.rag_chroma_path = "./jira_tasks_chroma_db"
         self.collection_name = "project_data"
         self.mongodb_uri = "mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0"
         self.embedding_cache = {}

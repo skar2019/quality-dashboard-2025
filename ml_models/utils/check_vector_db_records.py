@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class VectorDBChecker:
     def __init__(self):
         self.mongo_url = "mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0"
-        self.chroma_db_path = "/opt/homebrew/var/www/acsqd/ml_models/jira_tasks_chroma_db"
+        self.chroma_db_path = "./jira_tasks_chroma_db"
         self.collection_name = "project_data"
         
         # Initialize connections
