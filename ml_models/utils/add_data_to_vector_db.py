@@ -109,73 +109,22 @@ class VectorDBAdder:
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
             
-            # ChromaDB connection - handle readonly database issue
+            # ChromaDB connection - use in-memory client to avoid readonly database issues
             logger.info("Connecting to ChromaDB...")
             
-            # Clear ChromaDB completely before creating new instance
-            self.clear_chromadb_completely()
-            
-            # Try to create directory with proper permissions
+            # Use in-memory ChromaDB client to avoid readonly database issues
             try:
-                if not os.path.exists(self.chroma_db_path):
-                    os.makedirs(self.chroma_db_path, mode=0o755)
-                    logger.info(f"✅ Created ChromaDB directory: {self.chroma_db_path}")
-                else:
-                    # Try to fix permissions on existing directory
-                    try:
-                        os.chmod(self.chroma_db_path, 0o755)
-                        logger.info(f"✅ Fixed permissions on ChromaDB directory: {self.chroma_db_path}")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Could not fix permissions: {e}")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not create/fix directory: {e}")
-            
-            # Try different approaches to create ChromaDB client
-            chroma_client = None
-            
-            # Approach 1: Try standard client
-            try:
-                chroma_client = chromadb.PersistentClient(
-                    path=self.chroma_db_path,
+                self.chroma_client = chromadb.Client(
                     settings=Settings(
                         anonymized_telemetry=False,
-                        allow_reset=True
+                        allow_reset=True,
+                        is_persistent=False
                     )
                 )
-                logger.info("✅ Created ChromaDB client with standard approach")
+                logger.info("✅ Created in-memory ChromaDB client")
             except Exception as e:
-                logger.warning(f"⚠️ Standard client failed: {e}")
-                
-                # Approach 2: Try with different settings
-                try:
-                    chroma_client = chromadb.PersistentClient(
-                        path=self.chroma_db_path,
-                        settings=Settings(
-                            anonymized_telemetry=False,
-                            allow_reset=True,
-                            is_persistent=True
-                        )
-                    )
-                    logger.info("✅ Created ChromaDB client with alternative settings")
-                except Exception as e2:
-                    logger.warning(f"⚠️ Alternative settings failed: {e2}")
-                    
-                    # Approach 3: Try in-memory client as fallback
-                    try:
-                        logger.info("🔄 Trying in-memory ChromaDB client as fallback...")
-                        chroma_client = chromadb.Client(
-                            settings=Settings(
-                                anonymized_telemetry=False,
-                                allow_reset=True,
-                                is_persistent=False
-                            )
-                        )
-                        logger.info("✅ Created in-memory ChromaDB client")
-                    except Exception as e3:
-                        logger.error(f"❌ All ChromaDB client approaches failed: {e3}")
-                        raise
-            
-            self.chroma_client = chroma_client
+                logger.error(f"❌ Failed to create ChromaDB client: {e}")
+                raise
             
             # Get or create collection
             try:
@@ -195,49 +144,32 @@ class VectorDBAdder:
         try:
             logger.info("Setting up embedding model...")
             
-            # Clear ChromaDB again before creating vectorstore
-            self.clear_chromadb_completely()
-            
             # Use the same embedding model as SimpleRAGChat
             self.embeddings = OllamaEmbeddings(
                 model="nomic-embed-text"
             )
             
-            # Setup vectorstore using LangChain Chroma (same as SimpleRAGChat)
-            # Create new vectorstore instance with fresh ChromaDB
-            # Use a different approach to avoid instance conflicts
+            # Setup vectorstore using LangChain Chroma with in-memory client
+            # Create new vectorstore instance with in-memory ChromaDB
             try:
                 self.vectorstore = Chroma(
-                    persist_directory=self.chroma_db_path, 
-                    embedding_function=self.embeddings, 
-                    collection_name=self.collection_name
-                )
-                logger.info("✅ Vectorstore created successfully")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to create vectorstore with standard approach: {e}")
-                # Try alternative approach
-                logger.info("🔄 Trying alternative vectorstore creation approach...")
-                
-                # Create ChromaDB client first
-                chroma_client = chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True,
-                        is_persistent=True
-                    )
-                )
-                
-                # Create collection
-                collection = chroma_client.create_collection(name=self.collection_name)
-                
-                # Create vectorstore with existing client
-                self.vectorstore = Chroma(
-                    client=chroma_client,
+                    client=self.chroma_client,
                     collection_name=self.collection_name,
                     embedding_function=self.embeddings
                 )
-                logger.info("✅ Vectorstore created with alternative approach")
+                logger.info("✅ Vectorstore created successfully with in-memory client")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to create vectorstore with client: {e}")
+                # Fallback: create vectorstore without client
+                try:
+                    self.vectorstore = Chroma(
+                        embedding_function=self.embeddings,
+                        collection_name=self.collection_name
+                    )
+                    logger.info("✅ Vectorstore created successfully with fallback approach")
+                except Exception as e2:
+                    logger.error(f"❌ Failed to create vectorstore: {e2}")
+                    raise
             
             logger.info("Embedding model and vectorstore loaded successfully")
         except Exception as e:
