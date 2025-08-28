@@ -348,9 +348,36 @@ class VectorDBAdder:
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
+def fix_permissions():
+    """Fix permissions on ChromaDB directory"""
+    chroma_db_path = "./jira_tasks_chroma_db"
+    try:
+        if os.path.exists(chroma_db_path):
+            # Fix directory permissions
+            os.chmod(chroma_db_path, 0o755)
+            
+            # Fix permissions on all files and subdirectories
+            for root, dirs, files in os.walk(chroma_db_path):
+                for d in dirs:
+                    os.chmod(os.path.join(root, d), 0o755)
+                for f in files:
+                    os.chmod(os.path.join(root, f), 0o644)
+            
+            print(f"✅ Fixed permissions on {chroma_db_path}")
+        else:
+            print(f"ℹ️ Directory {chroma_db_path} does not exist")
+    except Exception as e:
+        print(f"❌ Error fixing permissions: {e}")
+
 def main():
     """Main function"""
     logger.info("🚀 Starting Vector Database Data Addition...")
+    
+    # Check if user wants to fix permissions first
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--fix-permissions":
+        fix_permissions()
+        return
     
     adder = VectorDBAdder()
     
