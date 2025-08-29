@@ -41,7 +41,7 @@ var dotenv = require("dotenv");
 var jiraSprintIssues_1 = require("../src/models/jiraSprintIssues");
 var jiraSprint_1 = require("../src/models/jiraSprint");
 dotenv.config();
-var MONGO_URL = process.env.MONGO_URL;
+var MONGO_URL = 'mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0';
 if (!MONGO_URL) {
     console.error('MONGO_URL not found in .env file.');
     process.exit(1);

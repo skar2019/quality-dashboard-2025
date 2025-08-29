@@ -2,38 +2,22 @@
 """
 Script to add data to ChromaDB vector database
 Adds JIRA task data from MongoDB to ChromaDB for RAG operations
-Uses the same embedding system as SimpleRAGChat for consistency
+Uses the EXACT same approach as chatbot.py for perfect compatibility
 """
 
 import os
 import sys
 import logging
 from datetime import datetime
-import shutil
 
 # Add the parent directory to Python path to access app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pymongo
 from pymongo import MongoClient
-import chromadb
-from chromadb.config import Settings
 
-# Import LangChain components for consistency with chatbot.py
-# Updated imports to use new packages and avoid deprecation warnings
-try:
-    from langchain_ollama import OllamaEmbeddings
-except ImportError:
-    # Fallback to old import if new package not available
-    from langchain_community.embeddings import OllamaEmbeddings
-
-try:
-    from langchain_chroma import Chroma
-except ImportError:
-    # Fallback to old import if new package not available
-    from langchain_community.vectorstores import Chroma
-
-from langchain.docstore.document import Document
+# Import the SimpleRAGChat class directly from chatbot.py
+from app.routes.chatbot import SimpleRAGChat
 
 # Setup logging
 logging.basicConfig(
@@ -46,170 +30,25 @@ class VectorDBAdder:
     def __init__(self):
         self.mongo_url = "mongodb+srv://deepak:h0ASt7mfso5KlOHl@cluster0.clgc6xj.mongodb.net/quality_dashboard?retryWrites=true&w=majority&appName=Cluster0"
         
-        # Use the jira_tasks_chroma_db directory as requested
-        self.chroma_db_path = "./jira_tasks_chroma_db"
-        self.collection_name = "project_data"
+        # Use the EXACT same SimpleRAGChat instance as chatbot.py
+        self.rag_instance = SimpleRAGChat()
         
-        # Initialize connections
+        # Initialize MongoDB connection
         self.mongo_client = None
-        self.chroma_client = None
-        self.collection = None
-        self.embeddings = None
-        self.vectorstore = None
+        self.mongo_collection = None
         
-        self.setup_connections()
-        self.setup_models()
+        self.setup_mongodb()
     
-    def clear_chromadb_completely(self):
-        """Completely clear ChromaDB instance and data"""
+    def setup_mongodb(self):
+        """Setup MongoDB connection"""
         try:
-            logger.info("🧹 Clearing ChromaDB completely...")
-            
-            # Method 1: Try to reset existing client
-            try:
-                existing_client = chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True
-                    )
-                )
-                existing_client.reset()
-                logger.info("✅ Reset existing ChromaDB client")
-            except Exception as e:
-                logger.info(f"ℹ️ No existing client to reset: {e}")
-            
-            # Method 2: Delete the entire ChromaDB directory
-            if os.path.exists(self.chroma_db_path):
-                try:
-                    shutil.rmtree(self.chroma_db_path)
-                    logger.info(f"🗑️ Deleted ChromaDB directory: {self.chroma_db_path}")
-                except Exception as e:
-                    logger.warning(f"⚠️ Could not delete ChromaDB directory: {e}")
-            
-            # Method 3: Force garbage collection to clear any remaining references
-            import gc
-            gc.collect()
-            logger.info("🧹 Garbage collection completed")
-            
-            # Method 4: Wait a moment for any pending operations
-            import time
-            time.sleep(1)
-            
-        except Exception as e:
-            logger.error(f"❌ Error clearing ChromaDB: {e}")
-    
-    def setup_connections(self):
-        """Setup MongoDB and ChromaDB connections"""
-        try:
-            # MongoDB connection
             logger.info("Connecting to MongoDB...")
             self.mongo_client = MongoClient(self.mongo_url)
             db = self.mongo_client.quality_dashboard
             self.mongo_collection = db.jirasprintissues
             logger.info("MongoDB connection established successfully")
-            
-            # ChromaDB connection - create persistent directory on server
-            logger.info("Connecting to ChromaDB...")
-            
-            # Ensure the jira_tasks_chroma_db directory exists with proper permissions
-            try:
-                if not os.path.exists(self.chroma_db_path):
-                    os.makedirs(self.chroma_db_path, mode=0o755)
-                    logger.info(f"✅ Created ChromaDB directory: {self.chroma_db_path}")
-                else:
-                    # Ensure directory has proper permissions
-                    os.chmod(self.chroma_db_path, 0o755)
-                    logger.info(f"✅ Ensured ChromaDB directory permissions: {self.chroma_db_path}")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not create/fix directory: {e}")
-            
-            # Create persistent ChromaDB client
-            try:
-                self.chroma_client = chromadb.PersistentClient(
-                    path=self.chroma_db_path,
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True
-                    )
-                )
-                logger.info("✅ Created persistent ChromaDB client")
-            except Exception as e:
-                logger.warning(f"⚠️ Persistent client failed: {e}")
-                # Fallback to in-memory client
-                logger.info("🔄 Falling back to in-memory ChromaDB client...")
-                self.chroma_client = chromadb.Client(
-                    settings=Settings(
-                        anonymized_telemetry=False,
-                        allow_reset=True,
-                        is_persistent=False
-                    )
-                )
-                logger.info("✅ Created in-memory ChromaDB client")
-            
-            # Clear any existing collections and create fresh one
-            try:
-                # List existing collections
-                collections = self.chroma_client.list_collections()
-                logger.info(f"Found {len(collections)} existing collections")
-                
-                # Delete existing collection if it exists
-                for collection in collections:
-                    if collection.name == self.collection_name:
-                        self.chroma_client.delete_collection(name=self.collection_name)
-                        logger.info(f"✅ Deleted existing collection: {self.collection_name}")
-                        break
-            except Exception as e:
-                logger.info(f"ℹ️ No existing collections to clear: {e}")
-            
-            # Create new collection
-            try:
-                self.collection = self.chroma_client.create_collection(name=self.collection_name)
-                logger.info(f"✅ Created new ChromaDB collection: {self.collection_name}")
-            except Exception as e:
-                logger.error(f"❌ Failed to create collection: {e}")
-                raise
-            
         except Exception as e:
-            logger.error(f"Error setting up connections: {str(e)}")
-            raise
-    
-    def setup_models(self):
-        """Setup embedding model - using the same as SimpleRAGChat"""
-        try:
-            logger.info("Setting up embedding model...")
-            
-            # Use the same embedding model as SimpleRAGChat
-            self.embeddings = OllamaEmbeddings(
-                model="nomic-embed-text"
-            )
-            
-            # Setup vectorstore using LangChain Chroma
-            # Create new vectorstore instance with the ChromaDB client and collection
-            try:
-                # Create vectorstore with explicit collection
-                self.vectorstore = Chroma(
-                    client=self.chroma_client,
-                    collection_name=self.collection_name,
-                    embedding_function=self.embeddings
-                )
-                logger.info("✅ Vectorstore created successfully with ChromaDB client")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to create vectorstore with client: {e}")
-                # Fallback: create vectorstore without client
-                try:
-                    self.vectorstore = Chroma(
-                        embedding_function=self.embeddings,
-                        collection_name=self.collection_name
-                    )
-                    logger.info("✅ Vectorstore created successfully with fallback approach")
-                except Exception as e2:
-                    logger.error(f"❌ Failed to create vectorstore: {e2}")
-                    raise
-            
-            logger.info("Embedding model and vectorstore loaded successfully")
-        except Exception as e:
-            logger.error(f"Error setting up embedding model: {str(e)}")
+            logger.error(f"Error setting up MongoDB: {str(e)}")
             raise
     
     def clean_text(self, text: str) -> str:
@@ -231,7 +70,7 @@ class VectorDBAdder:
             return str(date_str)
     
     def add_data_to_vector_db(self):
-        """Add JIRA data from MongoDB to ChromaDB using the same format as chatbot.py"""
+        """Add JIRA data from MongoDB to ChromaDB using the EXACT same approach as chatbot.py"""
         try:
             logger.info("=== Adding Data to Vector Database ===")
             
@@ -247,21 +86,29 @@ class VectorDBAdder:
             documents = list(self.mongo_collection.find({}, {'_id': 0}))
             logger.info(f"Retrieved {len(documents)} documents from MongoDB")
             
-            # Clear existing data in ChromaDB collection
-            logger.info("🧹 Clearing existing ChromaDB data...")
+            # Clear existing data in vectorstore (same as chatbot.py approach)
+            logger.info("🧹 Clearing existing vectorstore data...")
             try:
-                # Clear the collection data
-                self.collection.delete(where={})
-                logger.info("✅ Cleared existing collection data")
+                # Use the same approach as chatbot.py - delete collection and recreate
+                self.rag_instance.vectorstore.delete_collection()
+                logger.info("✅ Deleted existing collection")
+                
+                # Recreate the vectorstore using the same approach as SimpleRAGChat
+                self.rag_instance.vectorstore = self.rag_instance.vectorstore.__class__(
+                    persist_directory=self.rag_instance.persist_directory, 
+                    embedding_function=self.rag_instance.embeddings, 
+                    collection_name="project_data"
+                )
+                logger.info("✅ Recreated vectorstore")
             except Exception as e:
-                logger.warning(f"Could not clear collection data: {e}")
+                logger.warning(f"Could not clear vectorstore: {e}")
             
-            # Process documents using the same format as chatbot.py
+            # Process documents using the EXACT same format as chatbot.py
             langchain_documents = []
             
             for doc in documents:
                 try:
-                    # Extract and clean JIRA item data (same as chatbot.py)
+                    # Extract and clean JIRA item data (EXACT same as chatbot.py)
                     issue_key = self.clean_text(doc.get('taskId', 'Unknown'))
                     summary = self.clean_text(doc.get('summary', 'No Summary'))
                     description = self.clean_text(doc.get('description', 'No Description'))
@@ -281,10 +128,10 @@ class VectorDBAdder:
                         logger.warning(f"Skipping item {issue_key} - no summary or description")
                         continue
                     
-                    # Create document content exactly as in chatbot.py
+                    # Create document content EXACTLY as in chatbot.py
                     content = f"Task ID: {issue_key}\nTitle: {summary}\nDescription: {description}\nStatus: {status}\nPriority: {priority}\nAssignee: {assignee}\nReporter: {reporter}\nIssue Type: {issue_type}\nResolution: {resolution}\nProject: {project_id}\nSprint: {sprint_id}"
                     
-                    # Create metadata exactly as in chatbot.py
+                    # Create metadata EXACTLY as in chatbot.py
                     metadata = {
                         "task_id": issue_key,
                         "status": status,
@@ -296,22 +143,25 @@ class VectorDBAdder:
                     }
                     
                     # Create LangChain Document
+                    from langchain.docstore.document import Document
                     langchain_doc = Document(
                         page_content=content,
                         metadata=metadata
                     )
                     langchain_documents.append(langchain_doc)
                     
+                    logger.debug(f"Processed JIRA item: {issue_key} ({len(content)} chars)")
+                    
                 except Exception as e:
                     logger.error(f"Error processing document {doc.get('taskId', 'Unknown')}: {e}")
                     continue
             
-            # Add documents to vectorstore using batch processing (same as chatbot.py)
+            # Add documents to vectorstore using EXACT same batch processing as chatbot.py
             if langchain_documents:
                 logger.info(f"📚 Adding {len(langchain_documents)} documents to vector store...")
                 
-                # Use batch processing for better performance
-                batch_size = 50  # Same as chatbot.py
+                # Use batch processing for better performance (same as chatbot.py)
+                batch_size = 50
                 total_added = 0
                 failed_batches = 0
                 
@@ -321,18 +171,18 @@ class VectorDBAdder:
                     total_batches = (len(langchain_documents) + batch_size - 1) // batch_size
                     
                     try:
-                        self.vectorstore.add_documents(batch)
+                        self.rag_instance.vectorstore.add_documents(batch)
                         total_added += len(batch)
                         logger.info(f"✅ Added batch {batch_num}/{total_batches}: {len(batch)} documents")
                     except Exception as e:
                         failed_batches += 1
                         logger.error(f"❌ Failed to add batch {batch_num}/{total_batches}: {e}")
                         
-                        # Try adding documents individually as fallback
+                        # Try adding documents individually as fallback (same as chatbot.py)
                         individual_success = 0
                         for doc in batch:
                             try:
-                                self.vectorstore.add_documents([doc])
+                                self.rag_instance.vectorstore.add_documents([doc])
                                 individual_success += 1
                                 total_added += 1
                             except Exception as doc_error:
@@ -347,6 +197,34 @@ class VectorDBAdder:
                     logger.warning(f"⚠️ Added {total_added} documents with {failed_batches} failed batches")
             else:
                 logger.warning("⚠️ No valid documents to add to vector store")
+            
+            # Refresh dynamic vocabulary with new data (same as chatbot.py)
+            try:
+                self.rag_instance._refresh_dynamic_vocabulary()
+                logger.info("🔄 Dynamic vocabulary refreshed with new JIRA data")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not refresh dynamic vocabulary: {e}")
+            
+            # Verify the data was added correctly
+            try:
+                all_docs = self.rag_instance.vectorstore.get()
+                total_docs = len(all_docs['documents']) if all_docs['documents'] else 0
+                logger.info(f"✅ Verification: {total_docs} documents now in vectorstore")
+                
+                # Log sample metadata for debugging
+                if all_docs['metadatas'] and len(all_docs['metadatas']) > 0:
+                    sample_metadata = all_docs['metadatas'][0]
+                    logger.info(f"📊 Sample metadata: {sample_metadata}")
+                    
+                    # Check for projects
+                    projects = set()
+                    for metadata in all_docs['metadatas']:
+                        if metadata.get('project_id'):
+                            projects.add(metadata['project_id'])
+                    logger.info(f"📊 Found {len(projects)} unique projects: {list(projects)}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Could not verify data: {e}")
             
             logger.info(f"✅ Successfully added {len(langchain_documents)} documents to ChromaDB")
             return True
@@ -364,36 +242,9 @@ class VectorDBAdder:
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
-def fix_permissions():
-    """Fix permissions on ChromaDB directory"""
-    chroma_db_path = "./jira_tasks_chroma_db"
-    try:
-        if os.path.exists(chroma_db_path):
-            # Fix directory permissions
-            os.chmod(chroma_db_path, 0o755)
-            
-            # Fix permissions on all files and subdirectories
-            for root, dirs, files in os.walk(chroma_db_path):
-                for d in dirs:
-                    os.chmod(os.path.join(root, d), 0o755)
-                for f in files:
-                    os.chmod(os.path.join(root, f), 0o644)
-            
-            print(f"✅ Fixed permissions on {chroma_db_path}")
-        else:
-            print(f"ℹ️ Directory {chroma_db_path} does not exist")
-    except Exception as e:
-        print(f"❌ Error fixing permissions: {e}")
-
 def main():
     """Main function"""
     logger.info("🚀 Starting Vector Database Data Addition...")
-    
-    # Check if user wants to fix permissions first
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--fix-permissions":
-        fix_permissions()
-        return
     
     adder = VectorDBAdder()
     
@@ -402,6 +253,20 @@ def main():
         
         if success:
             logger.info("🎉 Data successfully added to vector database!")
+            
+            # Test the data with a simple query using the same RAG instance
+            logger.info("🧪 Testing data with sample query...")
+            try:
+                test_response = adder.rag_instance.process_query("Show me all tasks in Sprint-1")
+                logger.info(f"✅ Test query successful: {test_response[:200]}...")
+                
+                # Test structured data extraction
+                from app.routes.chatbot import TaskData
+                structured_tasks = adder.rag_instance.extract_structured_tasks("Show me all tasks")
+                logger.info(f"✅ Structured extraction: {len(structured_tasks)} tasks found")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Test query failed: {e}")
         else:
             logger.error("❌ Failed to add data to vector database")
             sys.exit(1)

@@ -4014,7 +4014,7 @@ async def process_jira_data(request: ProcessJiraDataRequest):
                 success=False,
                 processed_items=0,
                 processing_time=0.0,
-                collection_name="jira_tasks_chroma_db",
+                collection_name="project_data",
                 message="No JIRA data received"
             )
         
@@ -4158,7 +4158,7 @@ async def process_jira_data(request: ProcessJiraDataRequest):
             success=True,
             processed_items=len(documents),
             processing_time=processing_time,
-            collection_name="jira_tasks_chroma_db",
+            collection_name="project_data",
             message=f"Successfully processed {len(documents)} JIRA items for RAG embedding using SimpleRAGChat system"
         )
         
